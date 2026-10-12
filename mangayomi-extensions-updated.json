@@ -109,6 +109,28 @@
     "sourceCodeLanguage": 1,
     "notes": "목록·상세 제목 한국어/일본어 전환 · 제목 언어 설정 캐시 키 갱신 · Anissia 일본어 원제 우선 + AniList 보조 · 새로고침 즉시 반영 · Popular/Latest 첫 번째 미디어 요일 카드 · 커스텀 목록 카드 · 공용 이벤트 카드 · 목록/상세 10분 캐시 · 실제 회차 번호 유지 · 재생 시 최신 HLS 확인 · 상위 HLS 자동 해석 다운로드 · 사이트 자막 끄기 옵션 · Mangayomi WebView bool 오류 우회 · 중앙신호등 주소 자동 적용"
   },
+    {
+    "name": "re:ainme",
+    "id": 780920260911804,
+    "baseUrl": "https://reanime.to/",
+    "lang": "en",
+    "typeSource": "single",
+    "iconUrl": "https://dc-toki-mangayomi-media.pages.dev/icon/ko.media.png",
+    "dateFormat": "",
+    "dateFormatLocale": "",
+    "isNsfw": false,
+    "hasCloudflare": false,
+    "sourceCodeUrl": "https://raw.githubusercontent.com/wsun1023/mangayomi/main/reainme.js",
+    "apiUrl": "",
+    "version": "0.1.1",
+    "isManga": false,
+    "itemType": 1,
+    "isFullData": false,
+    "appMinVerReq": "0.9.2",
+    "additionalParams": "",
+    "sourceCodeLanguage": 1,
+    "notes": ""
+  },
   {
     "name": "티비룸",
     "id": 780920260911801,
