@@ -515,6 +515,7 @@ class DefaultExtension extends MProvider {
 
     this.prefTitleLanguage = "reanime_title_language_v1";
     this.prefServerOrder = "reanime_server_order_v1";
+    this.prefWorkerUrl = "reanime_worker_url_v1";
   }
 
   _text(v) {
@@ -1292,6 +1293,12 @@ class DefaultExtension extends MProvider {
             url: s.url || s.file
           }));
 
+          const workerPref = (this._preference(this.prefWorkerUrl, "") || "").trim().replace(/\/+$/, "");
+          const wrapWorker = (rawUrl) => {
+            if (!workerPref || !workerPref.startsWith("http")) return rawUrl;
+            return `${workerPref}/?url=${encodeURIComponent(rawUrl)}&key=${encodeURIComponent(decrypted.playlistKey)}`;
+          };
+
           let variantsParsed = false;
           let parsedAudios = [];
           try {
@@ -1301,9 +1308,14 @@ class DefaultExtension extends MProvider {
               const { variants, audios } = this._parseHlsVariants(manifest, streamUrl, serverLabel, headers, subtitles, decrypted.playlistKey);
               parsedAudios = audios;
               for (const v of variants) {
-                if (!seenUrls[v.url]) {
-                  seenUrls[v.url] = true;
-                  videos.push(v);
+                const finalVUrl = wrapWorker(v.url);
+                if (!seenUrls[finalVUrl]) {
+                  seenUrls[finalVUrl] = true;
+                  videos.push({
+                    ...v,
+                    url: finalVUrl,
+                    originalUrl: v.url
+                  });
                   variantsParsed = true;
                 }
               }
@@ -1311,10 +1323,11 @@ class DefaultExtension extends MProvider {
           } catch (_) {}
 
           // Always prepend the Master playlist option (contains both video and audio tracks)
-          if (!seenUrls[streamUrl]) {
-            seenUrls[streamUrl] = true;
+          const finalMasterUrl = wrapWorker(streamUrl);
+          if (!seenUrls[finalMasterUrl]) {
+            seenUrls[finalMasterUrl] = true;
             videos.unshift({
-              url: streamUrl,
+              url: finalMasterUrl,
               originalUrl: streamUrl,
               quality: `${serverLabel} · Auto`,
               headers: headers,
@@ -1419,6 +1432,15 @@ class DefaultExtension extends MProvider {
           valueIndex: 0,
           entries: ["HD-2 (Default)", "HD-1"],
           entryValues: ["HD-2", "HD-1"]
+        }
+      },
+      {
+        key: this.prefWorkerUrl,
+        editTextPreference: {
+          title: "Cloudflare Worker Proxy URL",
+          summary: "Optional: FlixCloud decryption worker URL (e.g. https://xxx.workers.dev)",
+          value: "",
+          dialogTitle: "Worker URL"
         }
       }
     ];
