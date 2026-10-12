@@ -8,7 +8,7 @@ const mangayomiSources = [{
   itemType: 1,
   isNsfw: false,
   hasCloudflare: false,
-  version: "0.1.15",
+  version: "0.1.16",
   dateFormat: "",
   dateFormatLocale: "",
   pkgPath: "anime/src/ko/ani24.js",
@@ -323,7 +323,39 @@ class DefaultExtension extends MProvider {
   _jsonpHtml(body) { const s = this._text(body).trim().replace(/^callback\s*\(/, "").replace(/\)\s*$/, ""); try { const d = JSON.parse(s); return this._text(d.msg); } catch (_) { return body; } }
   _imageUrl(base, item) { if (!item) return ""; for (const key of ["data-original", "data-src", "src"]) { const v = this._text(item.attr(key)).trim(); if (v && !/^data:/i.test(v)) return this._absoluteUrl(base, v); } return ""; }
   _versionedDetailPath(path) { return this._text(path).replace(/#.*$/, "") + "#ani24_detail_v2"; }
-  _parseCards(document, base, paginated) {
+  _titleFromPath(path, prefix) {
+    const value = this._text(path).replace(/[?#].*$/, "").slice(prefix.length);
+    try { return decodeURIComponent(value).trim(); } catch (_) { return value.trim(); }
+  }
+  _parseCurrentCards(document, base, page) {
+    const list = [], seen = Object.create(null), currentPage = Math.max(1, Number(page) || 1);
+    let hasNextPage = false;
+    for (const link of document.select("a[href]")) {
+      const href = this._text(link.attr("href")).trim();
+      const origin = this._origin(this._absoluteUrl(base + "/", href)).toLowerCase();
+      if (origin !== this._origin(base).toLowerCase()) continue;
+      const rawPath = this._relativePath(href), path = rawPath.replace(/[?#].*$/, "");
+      if (!/^\/c\/[^/]+\/?$/.test(path)) {
+        const next = rawPath.match(/[?&]page=(\d+)/i);
+        let section = path;
+        try { section = decodeURIComponent(path); } catch (_) {}
+        if (section === "/방영중" && next && Number(next[1]) === currentPage + 1) hasNextPage = true;
+        continue;
+      }
+      const name = this._titleFromPath(path.replace(/\/$/, ""), "/c/");
+      const key = name;
+      if (!name) continue;
+      const imageUrl = this._imageUrl(base, link.selectFirst("img"));
+      if (seen[key] !== undefined) {
+        if (!list[seen[key]].imageUrl && imageUrl) list[seen[key]].imageUrl = imageUrl;
+        continue;
+      }
+      seen[key] = list.length;
+      list.push({ name, link: this._versionedDetailPath(path), imageUrl });
+    }
+    return { list, hasNextPage };
+  }
+  _parseCards(document, base, paginated, page) {
     const list = [], seen = {};
     for (const item of document.select(".show-item")) {
       const link = item.selectFirst("a.show-item-img-link[href]") || item.selectFirst(".show-item-tile-link[href]") || item.selectFirst("a[href]");
@@ -331,6 +363,7 @@ class DefaultExtension extends MProvider {
       if (!name || !/^\/\d+\//.test(path) || seen[path]) continue;
       list.push({ name, link: this._versionedDetailPath(path), imageUrl: this._imageUrl(base, item.selectFirst("img")) }); seen[path] = true;
     }
+    if (!list.length) return this._parseCurrentCards(document, base, page);
     return { list, hasNextPage: paginated !== false && list.length >= 20 };
   }
   _apiUrl(base, page, template, catid, sort, genre, day) { return base + "/index.php?s=api&c=api&m=template&format=jsonp&name=" + template + ".html&catid=" + catid + "&order=" + encodeURIComponent(sort || "updatetime") + "&page=" + Math.max(1, Number(page) || 1) + "&keyword=" + encodeURIComponent(genre || "") + "&weeks=" + encodeURIComponent(day || ""); }
@@ -348,9 +381,15 @@ class DefaultExtension extends MProvider {
   }
   async _list(page, rule) {
     const n = this._normalizeRule(rule, this._defaultLatestRule()), base = await this._resolveBaseUrl();
+    if (n.mode === "ongoing" && n.sort === "updatetime") {
+      const currentPage = Math.max(1, Number(page) || 1), params = [];
+      if (n.day) params.push("weekday=" + encodeURIComponent(this._nameFor(this.days, n.day, "")));
+      if (currentPage > 1) params.push("page=" + currentPage);
+      const url = base + "/" + encodeURIComponent("방영중") + (params.length ? "?" + params.join("&") : "");
+      return this._parseCards(new Document(await this._requestText(url, base + "/", "방영중 목록")), base, true, currentPage);
+    }
     if (n.mode === "top") return this._topList(base, n.top, page);
     if (n.mode === "year") { const url = base + this._yearPath(page, n); return this._parseCards(new Document(await this._requestText(url, base + "/", "연도별 목록")), base, true); }
-    if (n.mode === "ongoing" && Number(page) === 1 && n.sort === "updatetime" && n.day) { const url = base + "/search/catid-1-video_status-1-weeks-" + n.day + ".html"; return this._parseCards(new Document(await this._requestText(url, base + "/", "요일 목록")), base, false); }
     const config = n.mode === "ongoing" ? ["ong", "3"] : n.mode === "movie" ? ["movie", "2"] : ["list", "1"];
     const url = this._apiUrl(base, page, config[0], config[1], n.sort, n.genre, n.day);
     return this._parseCards(new Document(this._jsonpHtml(await this._requestText(url, base + "/", "목록"))), base, true);
@@ -388,11 +427,31 @@ class DefaultExtension extends MProvider {
   }
 
   _parseDate(text) { const s = this._text(text).trim(); const m = s.match(/(20\d{2})[-./](\d{1,2})[-./](\d{1,2})/); if (!m) return ""; return String(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime()); }
-  _parseEpisodes(document) { const episodes = [], seen = {}; for (const item of document.select(".eps-box .eps-item")) { const a = item.selectFirst("a[href]"); if (!a) continue; const path = this._relativePath(a.attr("href")); if (!path || seen[path]) continue; const name = this._text(a.text).trim() || "재생"; const date = item.selectFirst(".eps-date"); episodes.push({ name, url: path, dateUpload: date ? this._parseDate(date.text) : "" }); seen[path] = true; } return episodes; }
+  _parseEpisodes(document) {
+    const episodes = [], seen = {};
+    for (const item of document.select(".eps-box .eps-item")) {
+      const a = item.selectFirst("a[href]"); if (!a) continue;
+      const path = this._relativePath(a.attr("href")); if (!path || seen[path]) continue;
+      const name = this._text(a.text).trim() || "재생", date = item.selectFirst(".eps-date");
+      episodes.push({ name, url: path, dateUpload: date ? this._parseDate(date.text) : "" }); seen[path] = true;
+    }
+    if (episodes.length) return episodes;
+    for (const a of document.select("a[href]")) {
+      const path = this._relativePath(a.attr("href")).replace(/[?#].*$/, "");
+      if (!/^\/e\/[^/]+\/?$/.test(path) || seen[path]) continue;
+      const name = this._titleFromPath(path.replace(/\/$/, ""), "/e/");
+      if (!name) continue;
+      episodes.push({ name, url: path, dateUpload: "" }); seen[path] = true;
+    }
+    // The new detail page repeats its first episode in a separate play button.
+    const number = function(item) { const m = item.name.match(/(\d+(?:\.\d+)?)\s*화\s*$/); return m ? Number(m[1]) : null; };
+    if (episodes.length && episodes.every(function(item) { return number(item) !== null; })) episodes.sort(function(a, b) { return number(b) - number(a); });
+    return episodes;
+  }
   async getDetail(url) {
     const card = this._text(url).match(/\/__ani24_weekday_card__\/(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/);
     if (card) { const item = await this._tabCard(card[1]); return { name: item.name, link: item.link, imageUrl: item.imageUrl, author: "애니24", description: "오늘의 시간 흐름을 담은 움직이는 요일 카드입니다. 뒤로 돌아가 작품을 선택해 주세요.", genre: ["요일 안내"], status: 0, episodes: [], chapters: [] }; }
-    const base = await this._resolveBaseUrl(), path = this._relativePath(url); if (!/^\/\d+\//.test(path)) throw new Error("잘못된 애니24 작품 주소입니다."); const doc = new Document(await this._requestText(base + path, base + "/", "상세"));
+    const base = await this._resolveBaseUrl(), path = this._relativePath(url); if (!/^\/(?:\d+\/|c\/[^/?#]+)/.test(path)) throw new Error("잘못된 애니24 작품 주소입니다."); const doc = new Document(await this._requestText(base + path, base + "/", "상세"));
     const title = doc.selectFirst(".list-content > .top-movies-list-title h2") || doc.selectFirst("h1") || doc.selectFirst("meta[property='og:title']"); if (!title) throw new Error("작품 제목을 찾지 못했습니다.");
     const meta = doc.select(".article-box-meta li").map((n) => this._text(n.text).trim()).filter(Boolean); const genres = doc.select(".article-box-meta a[href*='keyword-']").map((n) => this._text(n.text).trim()).filter(Boolean); const cover = doc.selectFirst(".article-box-img img") || doc.selectFirst("meta[property='og:image']"); const desc = doc.selectFirst(".movie-coment"); const episodes = this._parseEpisodes(doc);
     const detailLanguage = await this._freshDetailTitleLanguage();
