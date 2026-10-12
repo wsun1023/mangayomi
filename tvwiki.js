@@ -11,7 +11,7 @@ const mangayomiSources = [{
   hasCloudflare: false,
   sourceCodeUrl: "https://raw.githubusercontent.com/wsun1023/mangayomi/main/tvwiki.js",
   apiUrl: "",
-  version: "0.2.0",
+  version: "0.2.1",
   isManga: false,
   itemType: 1,
   isFullData: false,
