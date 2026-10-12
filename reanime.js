@@ -1251,13 +1251,19 @@ class DefaultExtension extends MProvider {
     }
 
     if (!anilistId && slug) {
-      try {
-        const detail = await this.getDetail(`/anime/${slug}`);
-        if (detail && detail.description) {
-          const aidm = detail.description.match(/AniList ID:\s*(\d+)/i);
-          if (aidm) anilistId = parseInt(aidm[1], 10);
-        }
-      } catch (_) {}
+      const slugIdMatch = slug.match(/-(\d+)$/);
+      if (slugIdMatch) {
+        anilistId = parseInt(slugIdMatch[1], 10);
+      }
+      if (!anilistId) {
+        try {
+          const detail = await this.getDetail(`/anime/${slug}`);
+          if (detail && detail.description) {
+            const aidm = detail.description.match(/AniList ID:\s*(\d+)/i);
+            if (aidm) anilistId = parseInt(aidm[1], 10);
+          }
+        } catch (_) {}
+      }
     }
 
     const candidates = await this._resolveCandidates(slug, anilistId, episodeNumber);
@@ -1293,7 +1299,7 @@ class DefaultExtension extends MProvider {
             url: s.url || s.file
           }));
 
-          const workerPref = (this._preference(this.prefWorkerUrl, "") || "").trim().replace(/\/+$/, "");
+          const workerPref = (this._preference(this.prefWorkerUrl, "https://flix-proxy.wsun1023.workers.dev") || "").trim().replace(/\/+$/, "");
           const wrapWorker = (rawUrl) => {
             if (!workerPref || !workerPref.startsWith("http")) return rawUrl;
             return `${workerPref}/?url=${encodeURIComponent(rawUrl)}&key=${encodeURIComponent(decrypted.playlistKey)}`;
@@ -1439,7 +1445,7 @@ class DefaultExtension extends MProvider {
         editTextPreference: {
           title: "Cloudflare Worker Proxy URL",
           summary: "Optional: FlixCloud decryption worker URL (e.g. https://xxx.workers.dev)",
-          value: "",
+          value: "https://flix-proxy.wsun1023.workers.dev",
           dialogTitle: "Worker URL"
         }
       }
