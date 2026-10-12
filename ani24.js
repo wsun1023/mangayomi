@@ -10,11 +10,11 @@ const mangayomiSources = [{
   itemType: 1,
   isNsfw: false,
   hasCloudflare: false,
-  version: "0.1.17",
+  version: "0.1.19",
   dateFormat: "",
   dateFormatLocale: "",
   pkgPath: "anime/src/ko/ani24.js",
-  notes: "ani.ohli24.com 목록·상세·회차 선택자 갱신 · cdndania 영상 서버 탐색 · 페이지 이동 반영 · 목록·상세 제목 한국어/일본어 전환 · 제목 언어 설정 캐시 키 갱신 · Anissia 일본어 원제 우선 + AniList 보조 · 새로고침 즉시 반영 · 기본 설정 · 인기탭: 방영 중 + 오늘 요일 · 최신탭: 방영 중 + 전체 요일 + 업데이트순 · 필터 규칙 저장 · 커스텀 목록 카드 · 재생 서버 병렬 확인 · 영상 다운로드 호환"
+  notes: "ani.ohli24.com 목록·상세·회차 선택자 갱신 · OHLI24 공식 검색(/bbs/search.php?stx=) 단일 직결 적용으로 검색 속도 극대화 · cdndania 영상 서버 탐색 · 페이지 이동 반영 · 목록·상세 제목 한국어/일본어 전환 · 제목 언어 설정 캐시 키 갱신 · Anissia 일본어 원제 우선 + AniList 보조 · 새로고침 즉시 반영 · 기본 설정 · 인기탭: 방영 중 + 오늘 요일 · 최신탭: 방영 중 + 전체 요일 + 업데이트순 · 필터 규칙 저장 · 커스텀 목록 카드 · 재생 서버 병렬 확인 · 영상 다운로드 호환"
 }];
 
 function dcResolveListCardManifest(data, scope, tab) {
@@ -267,32 +267,32 @@ class DefaultExtension extends MProvider {
     try { const data = await this._fillBridgeMetadata(await this._titleBridgeMetadata(original)); if (!data || !data.ja) { this._setPreferenceString(key, JSON.stringify({ miss: true })); this._setPreferenceString(timeKey, String(Date.now())); return null; } this._setPreferenceString(key, JSON.stringify(data)); this._setPreferenceString(timeKey, String(Date.now())); return data; } catch (_) { return null; }
   }
   async _localizedTitle(name, languageOverride) { const original = this._text(name).trim(), language = languageOverride || this._titleLanguage(); if (!original || language === "ko") return original; const data = await this._titleMetadata(original), localized = data ? this._text(data[language]).trim() : ""; return localized || original; }
-  async _localizeResult(result) { if (!result || !Array.isArray(result.list) || this._titleLanguage() === "ko") return result; const items = result.list, workers = []; let cursor = 0; const work = async () => { while (true) { const index = cursor++; if (index >= items.length) return; const item = items[index]; if (!item || /\/__ani24_weekday_card__\//.test(this._text(item.link))) continue; item.name = await this._localizedTitle(item.name); } }; for (let index = 0; index < Math.min(4, items.length); index++) workers.push(work()); await Promise.all(workers); return result; }
+  async _localizeResult(result) { if (!result || !Array.isArray(result.list) || !result.list.length || this._titleLanguage() === "ko") return result; const items = result.list.slice(0, 8), workers = []; let cursor = 0; const work = async () => { while (true) { const index = cursor++; if (index >= items.length) return; const item = items[index]; if (!item || /\/__ani24_weekday_card__\//.test(this._text(item.link))) continue; try { item.name = await this._localizedTitle(item.name); } catch (_) {} } }; for (let index = 0; index < Math.min(4, items.length); index++) workers.push(work()); await Promise.all(workers); return result; }
   _isAllowedBaseUrl(v) { return /^https:\/\/(?:ani\.ohli24\.com|(?:www\.)?ohli24\.net)\/?$/i.test(this._text(v).trim()); }
   // Migrate legacy manual and signal URLs to the current Ani24 domain.
   _normalizeBaseUrl(v) { return this._trimSlash(v).toLowerCase().replace(/^https:\/\/(?:www\.)?ohli24\.net$/, this.fallbackBaseUrl); }
   async _resolveBaseUrl() {
+    if (this._cachedBaseUrl) return this._cachedBaseUrl;
     const manual = this._text(this._preference("ani24_domain_url", "")).trim();
-    if (this._isAllowedBaseUrl(manual)) return this._normalizeBaseUrl(manual);
-    try {
-      const r = await new Client({ persistentConnection: false, noProxy: true, timeout: 8, connectTimeout: 5 }).get(this.signalUrl, { "User-Agent": this.userAgent, "Accept": "application/json", "Cache-Control": "no-cache" });
-      if (r.statusCode >= 200 && r.statusCode < 300) {
-        const data = JSON.parse(r.body);
-        const candidate = data && data.domains && data.domains.ani24 ? data.domains.ani24.baseUrl : "";
-        if (this._isAllowedBaseUrl(candidate)) return this._normalizeBaseUrl(candidate);
-      }
-    } catch (_) {}
-    return this.fallbackBaseUrl;
+    if (this._isAllowedBaseUrl(manual)) return (this._cachedBaseUrl = this._normalizeBaseUrl(manual));
+    const cached = this._text(this._preference("ani24_cached_resolved_url", "")).trim();
+    const cachedTime = Number(this._preference("ani24_cached_resolved_time", "0"));
+    if (this._isAllowedBaseUrl(cached) && cachedTime > 0 && Date.now() - cachedTime < 24 * 60 * 60 * 1000) {
+      return (this._cachedBaseUrl = this._normalizeBaseUrl(cached));
+    }
+    this._setPreferenceString("ani24_cached_resolved_url", this.fallbackBaseUrl);
+    this._setPreferenceString("ani24_cached_resolved_time", String(Date.now()));
+    return (this._cachedBaseUrl = this.fallbackBaseUrl);
   }
   _headers(url, referer) { const origin = this._origin(url) || this.fallbackBaseUrl; return { "User-Agent": this.userAgent, "Accept": "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8", "Referer": referer || origin + "/" }; }
   async _pause(ms) { if (typeof setTimeout === "function") await new Promise(function(resolve) { setTimeout(resolve, ms); }); }
   _failureCode(r, e) { if (r && r.statusCode) return "HTTP" + r.statusCode; const s = this._text(e && (e.message || e)); if (/timeout/i.test(s)) return "TIMEOUT"; if (/certificate|handshake|TLS|SSL/i.test(s)) return "TLS"; return "NETWORK"; }
   async _requestText(url, referer, stage, extraHeaders) {
-    const transports = [{ name: "RHTTP", options: { persistentConnection: false, noProxy: true, timeout: 25, connectTimeout: 10 } }, { name: "DART", options: { useDartHttpClient: true, persistentConnection: false } }];
+    const transports = [{ name: "RHTTP", options: { persistentConnection: true, noProxy: true, timeout: 8, connectTimeout: 4 } }, { name: "DART", options: { useDartHttpClient: true, persistentConnection: true, timeout: 8 } }];
     const diagnostics = [];
     for (const t of transports) {
       try { const headers = this._headers(url, referer); Object.assign(headers, extraHeaders || {}); const r = await new Client(t.options).get(url, headers); if (r.statusCode >= 200 && r.statusCode < 300) return this._text(r.body); diagnostics.push(t.name + "=" + this._failureCode(r)); }
-      catch (e) { diagnostics.push(t.name + "=" + this._failureCode(null, e)); if (t.name === "RHTTP") await this._pause(120); }
+      catch (e) { diagnostics.push(t.name + "=" + this._failureCode(null, e)); }
     }
     throw new Error("애니24 " + (stage || "요청") + " 연결에 실패했습니다. 진단: " + diagnostics.join(","));
   }
@@ -438,6 +438,11 @@ class DefaultExtension extends MProvider {
     if (Number(page) > 1) params.push("page=" + Math.floor(Number(page)));
     return base + this._cataloguePath(kind) + (params.length ? "?" + params.join("&") : "");
   }
+  _searchUrl(base, page, query) {
+    const params = ["stx=" + encodeURIComponent(query)];
+    if (Number(page) > 1) params.push("page=" + Math.floor(Number(page)));
+    return base + "/bbs/search.php?" + params.join("&");
+  }
   _seriesKind(document) {
     const breadcrumb = document.selectFirst(".crumb");
     if (breadcrumb) for (const a of breadcrumb.select("a[href]")) {
@@ -516,32 +521,64 @@ class DefaultExtension extends MProvider {
     const q = this._normalizeSearch(query);
     if (q) {
       const base = await this._resolveBaseUrl(), compact = this._searchKey(q), currentPage = Math.max(1, Number(page) || 1);
-      const words = [q, compact, compact.replace(/[0-9]+/g, ""), compact.slice(0, 3), compact.slice(0, 2)].filter((v, i, a) => v && a.indexOf(v) === i);
+      const stripped = q.replace(/\s*(?:[0-9]+기|시즌\s*[0-9]+|part\s*[0-9]+|[0-9]+화|season\s*[0-9]+).*$/i, "").trim();
+      const strippedKey = stripped ? this._searchKey(stripped) : "";
+      const words = [];
+      words.push(q);
+      if (compact && compact !== q) words.push(compact);
+      if (stripped && stripped !== q && strippedKey !== compact) words.push(stripped);
+
       let all = [], hasNextPage = false;
       for (const word of words) {
-        // Search every category so ongoing and movie results remain available.
-        // The q key is provisional because MHT snapshots omit the form's script.
-        const results = await Promise.all(["ongoing", "finished", "movie"].map(async (mode) => {
-          const url = this._catalogueUrl(base, currentPage, { mode }, word);
-          return this._parseCards(new Document(await this._requestText(url, base + "/", "검색")), base, true, currentPage);
-        }));
+        const url = this._searchUrl(base, currentPage, word);
+        let result;
+        try {
+          result = this._parseCards(new Document(await this._requestText(url, base + "/", "검색")), base, true, currentPage);
+        } catch (_) {
+          continue;
+        }
         const seen = Object.create(null), wanted = this._searchKey(word);
-        all = []; hasNextPage = false;
-        for (const result of results) {
-          hasNextPage = hasNextPage || result.hasNextPage;
-          for (const item of result.list) {
-            const key = this._pathKey(item.link), titleKey = this._searchKey(item.name);
-            // Do not present an unfiltered catalogue if the server ignores q.
-            if (seen[key] || (wanted && titleKey.indexOf(wanted) < 0 && wanted.indexOf(titleKey) < 0)) continue;
-            seen[key] = true; all.push(item);
-          }
+        all = []; hasNextPage = result.hasNextPage;
+        for (const item of result.list) {
+          const key = this._pathKey(item.link), titleKey = this._searchKey(item.name);
+          if (seen[key] || (wanted && titleKey.indexOf(wanted) < 0 && wanted.indexOf(titleKey) < 0)) continue;
+          seen[key] = true; all.push(item);
         }
         if (all.length) break;
       }
-      all.sort((a, b) => {
-        const score = (name) => { const key = this._searchKey(name); return key === compact ? 0 : key.indexOf(compact) >= 0 || compact.indexOf(key) >= 0 ? 1 : 2 + this._levenshtein(key, compact); };
-        return score(a.name) - score(b.name);
+      if (!all.length) {
+        // Fallback to catalogue category search if bbs/search returned no results
+        for (const word of words.slice(0, 1)) {
+          try {
+            const results = await Promise.all(["ongoing", "finished", "movie"].map(async (mode) => {
+              const url = this._catalogueUrl(base, currentPage, { mode }, word);
+              return this._parseCards(new Document(await this._requestText(url, base + "/", "카탈로그 검색")), base, true, currentPage);
+            }));
+            const seen = Object.create(null), wanted = this._searchKey(word);
+            for (const result of results) {
+              hasNextPage = hasNextPage || result.hasNextPage;
+              for (const item of result.list) {
+                const key = this._pathKey(item.link), titleKey = this._searchKey(item.name);
+                if (seen[key] || (wanted && titleKey.indexOf(wanted) < 0 && wanted.indexOf(titleKey) < 0)) continue;
+                seen[key] = true; all.push(item);
+              }
+            }
+          } catch (_) {}
+          if (all.length) break;
+        }
+      }
+      const targetKey = compact || this._searchKey(q);
+      const scored = all.map((item) => {
+        const key = this._searchKey(item.name);
+        let s = 100;
+        if (key === targetKey) s = 0;
+        else if (key.indexOf(targetKey) === 0) s = 1;
+        else if (key.indexOf(targetKey) > 0 || targetKey.indexOf(key) >= 0) s = 2;
+        else s = 3 + this._levenshtein(key, targetKey);
+        return { item, score: s };
       });
+      scored.sort((a, b) => a.score - b.score);
+      all = scored.map((s) => s.item);
       return this._localizeResult({ list: all, hasNextPage });
     }
     const action = Number(this._filterValue(filters, "tabRuleAction", "0")); let rule = this._filterRule(filters); if (!rule && action >= 3 && action <= 5) rule = action === 3 ? this._defaultPopularRule() : this._defaultLatestRule(); if (!rule) throw new Error("애니24 필터에서 한 구역을 선택하세요."); const result = await this._list(page, rule); this._applyTabRuleAction(page, filters, rule); return this._localizeResult(result);
