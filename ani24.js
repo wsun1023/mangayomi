@@ -1,3 +1,5 @@
+// Updated 2026-10-12 for ani.ohli24.com using the supplied catalogue/detail/episode MHT snapshots.
+// No browser or live playback validation was performed. Advanced catalogue query keys are provisional.
 const mangayomiSources = [{
   name: "애니24",
   lang: "ko",
@@ -8,11 +10,11 @@ const mangayomiSources = [{
   itemType: 1,
   isNsfw: false,
   hasCloudflare: false,
-  version: "0.1.16",
+  version: "0.1.17",
   dateFormat: "",
   dateFormatLocale: "",
   pkgPath: "anime/src/ko/ani24.js",
-  notes: "목록·상세 제목 한국어/일본어 전환 · 제목 언어 설정 캐시 키 갱신 · Anissia 일본어 원제 우선 + AniList 보조 · 새로고침 즉시 반영 · 기본 설정 · 인기탭: 방영 중 + 오늘 요일 · 최신탭: 방영 중 + 전체 요일 + 업데이트순 · 필터 규칙 저장 · 커스텀 목록 카드 · 재생 서버 병렬 확인 · 영상 다운로드 호환"
+  notes: "ani.ohli24.com 목록·상세·회차 선택자 갱신 · cdndania 영상 서버 탐색 · 페이지 이동 반영 · 목록·상세 제목 한국어/일본어 전환 · 제목 언어 설정 캐시 키 갱신 · Anissia 일본어 원제 우선 + AniList 보조 · 새로고침 즉시 반영 · 기본 설정 · 인기탭: 방영 중 + 오늘 요일 · 최신탭: 방영 중 + 전체 요일 + 업데이트순 · 필터 규칙 저장 · 커스텀 목록 카드 · 재생 서버 병렬 확인 · 영상 다운로드 호환"
 }];
 
 function dcResolveListCardManifest(data, scope, tab) {
@@ -164,7 +166,8 @@ function dcApplySiteOrderEpisodeNumbers(detail) {
     const item = items[index];
     if (!item || typeof item !== "object") continue;
     const originalName = String(item.name == null ? "" : item.name).trim() || "재생";
-    item.name = String(items.length - index) + "화 .  " + originalName;
+    const number = (originalName.match(/(\d+(?:\.\d+)?)\s*화(?:\s|$)/) || [])[1];
+    item.name = (number || String(items.length - index)) + "화 .  " + originalName;
   }
   detail.episodes = items;
   detail.chapters = items;
@@ -194,9 +197,9 @@ class DefaultExtension extends MProvider {
       ["배틀", "배틀"], ["공포", "공포"], ["음악", "음악"], ["가족", "가족"]
     ];
     this.days = [["전체", ""], ["일요일", "1"], ["월요일", "2"], ["화요일", "3"], ["수요일", "4"], ["목요일", "5"], ["금요일", "6"], ["토요일", "7"], ["기타", "8"]];
-    this.sorts = [["업데이트", "updatetime"], ["인기순", "air_date"], ["방영일", "hits"]];
+    this.sorts = [["업데이트", "updatetime"], ["인기순", "hits"], ["공개일", "air_date"]];
     this.years = [["전체", ""]];
-    for (let year = 2025; year >= 2013; year--) this.years.push([String(year), String(year)]);
+    for (let year = new Date(Date.now() + 9 * 60 * 60 * 1000).getUTCFullYear(); year >= 2013; year--) this.years.push([String(year), String(year)]);
     this.years.push(["오래전", "old"]);
     this.yearKinds = [["완결", "finished"], ["극장판", "movie"]];
     this.topKinds = [["방영중 인기애니", "ongoing"], ["완결 인기애니", "finished"], ["극장판 인기애니", "movie"]];
@@ -206,8 +209,32 @@ class DefaultExtension extends MProvider {
   _text(v) { return v === null || v === undefined ? "" : String(v); }
   _trimSlash(v) { return this._text(v).trim().replace(/\/+$/, ""); }
   _origin(v) { const m = this._text(v).match(/^(https?:\/\/[^/]+)/i); return m ? m[1] : ""; }
-  _relativePath(v) { let s = this._text(v).trim(); if (/^https?:\/\//i.test(s)) s = s.replace(/^https?:\/\/[^/]+/i, ""); if (s && !s.startsWith("/")) s = "/" + s; return s; }
-  _absoluteUrl(base, v) { let s = this._text(v).trim().replace(/\\\//g, "/").replace(/&amp;/g, "&"); if (!s) return ""; if (s.startsWith("//")) return "https:" + s; if (/^https?:\/\//i.test(s)) return s; if (s.startsWith("/")) return this._origin(base) + s; return base.replace(/[?#].*$/, "").replace(/[^/]*$/, "") + s; }
+  _relativePath(value) {
+    let path = this._text(value).trim().replace(/&amp;/g, "&");
+    path = path.replace(/^(?:https?:)?\/\/[^/]+/i, "");
+    return path && path.charAt(0) !== "/" ? "/" + path : path;
+  }
+  _absoluteUrl(base, value) {
+    let url = this._text(value).trim().replace(/\\\//g, "/").replace(/&amp;/g, "&");
+    if (!url || /^(?:data|blob|cid|javascript|about):/i.test(url)) return "";
+    if (/^\/\//.test(url)) return "https:" + url;
+    if (/^https?:\/\//i.test(url)) return url;
+    if (/^[a-z][a-z0-9+.-]*:/i.test(url)) return "";
+    const origin = this._origin(base);
+    if (!origin) return "";
+    const clean = this._text(base).replace(/[?#].*$/, "");
+    if (url.charAt(0) === "?") return clean + url;
+    if (url.charAt(0) === "#") return this._text(base).replace(/#.*$/, "") + url;
+    const tail = clean.slice(origin.length) || "/";
+    const target = url.charAt(0) === "/" ? url : tail.replace(/[^/]*$/, "") + url;
+    const parts = target.split(/([?#].*)/, 2), stack = [];
+    for (const part of parts[0].split("/")) {
+      if (part === ".") continue;
+      if (part === "..") { if (stack.length > 1) stack.pop(); continue; }
+      stack.push(part);
+    }
+    return origin + stack.join("/") + (parts[1] || "");
+  }
   _hlsOriginalUrl(v) { const url = this._text(v).trim().replace(/#.*$/, ""); if (!url) return ""; return /\.(?:m3u8|m3u)$/i.test(url) ? url : url + "#download.m3u8"; }
 
   _preference(key, fallback) {
@@ -270,12 +297,21 @@ class DefaultExtension extends MProvider {
     throw new Error("애니24 " + (stage || "요청") + " 연결에 실패했습니다. 진단: " + diagnostics.join(","));
   }
   async _postForm(url, form, referer) {
-    const headers = this._headers(url, referer); headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"; headers["X-Requested-With"] = "XMLHttpRequest"; headers.Origin = this._origin(url);
-    const r = await new Client({ persistentConnection: false, noProxy: true, timeout: 25, connectTimeout: 10 }).post(url, headers, form);
-    if (r.statusCode < 200 || r.statusCode >= 300) throw new Error("재생 서버 HTTP" + r.statusCode);
-    return this._text(r.body);
+    const headers = this._headers(url, referer);
+    headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8";
+    headers["X-Requested-With"] = "XMLHttpRequest"; headers.Origin = this._origin(url);
+    const body = Object.keys(form || {}).map((key) => encodeURIComponent(key) + "=" + encodeURIComponent(this._text(form[key]))).join("&");
+    const transports = [{ persistentConnection: false, noProxy: true, timeout: 25, connectTimeout: 10 }, { useDartHttpClient: true, persistentConnection: false }];
+    const diagnostics = [];
+    for (const options of transports) {
+      try {
+        const response = await new Client(options).post(url, headers, body);
+        if (response && response.statusCode >= 200 && response.statusCode < 300) return this._text(response.body);
+        diagnostics.push(this._failureCode(response));
+      } catch (error) { diagnostics.push(this._failureCode(null, error)); }
+    }
+    throw new Error("재생 서버 연결에 실패했습니다. 진단: " + diagnostics.join(","));
   }
-
   _koreaDayNumber() { return new Date(Date.now() + 9 * 60 * 60 * 1000).getUTCDay() + 1; }
   _koreaWeekday() { return ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][this._koreaDayNumber() - 1]; }
   _weekdayName(slug) { return ({ monday: "월요일", tuesday: "화요일", wednesday: "수요일", thursday: "목요일", friday: "금요일", saturday: "토요일", sunday: "일요일" })[slug] || "오늘"; }
@@ -322,77 +358,138 @@ class DefaultExtension extends MProvider {
 
   _jsonpHtml(body) { const s = this._text(body).trim().replace(/^callback\s*\(/, "").replace(/\)\s*$/, ""); try { const d = JSON.parse(s); return this._text(d.msg); } catch (_) { return body; } }
   _imageUrl(base, item) { if (!item) return ""; for (const key of ["data-original", "data-src", "src"]) { const v = this._text(item.attr(key)).trim(); if (v && !/^data:/i.test(v)) return this._absoluteUrl(base, v); } return ""; }
-  _versionedDetailPath(path) { return this._text(path).replace(/#.*$/, "") + "#ani24_detail_v2"; }
+  _versionedDetailPath(path) { return this._text(path).replace(/#.*$/, "") + "#ani24_detail_v3"; }
   _titleFromPath(path, prefix) {
-    const value = this._text(path).replace(/[?#].*$/, "").slice(prefix.length);
+    const value = this._text(path).replace(/[?#].*$/, "").slice(prefix.length).replace(/\/$/, "");
     try { return decodeURIComponent(value).trim(); } catch (_) { return value.trim(); }
   }
-  _parseCurrentCards(document, base, page) {
-    const list = [], seen = Object.create(null), currentPage = Math.max(1, Number(page) || 1);
-    let hasNextPage = false;
-    for (const link of document.select("a[href]")) {
-      const href = this._text(link.attr("href")).trim();
-      const origin = this._origin(this._absoluteUrl(base + "/", href)).toLowerCase();
-      if (origin !== this._origin(base).toLowerCase()) continue;
-      const rawPath = this._relativePath(href), path = rawPath.replace(/[?#].*$/, "");
-      if (!/^\/c\/[^/]+\/?$/.test(path)) {
-        const next = rawPath.match(/[?&]page=(\d+)/i);
-        let section = path;
-        try { section = decodeURIComponent(path); } catch (_) {}
-        if (section === "/방영중" && next && Number(next[1]) === currentPage + 1) hasNextPage = true;
-        continue;
-      }
-      const name = this._titleFromPath(path.replace(/\/$/, ""), "/c/");
-      const key = name;
-      if (!name) continue;
-      const imageUrl = this._imageUrl(base, link.selectFirst("img"));
-      if (seen[key] !== undefined) {
-        if (!list[seen[key]].imageUrl && imageUrl) list[seen[key]].imageUrl = imageUrl;
-        continue;
-      }
-      seen[key] = list.length;
-      list.push({ name, link: this._versionedDetailPath(path), imageUrl });
+  _cleanPath(value) { return this._relativePath(value).replace(/#.*$/, ""); }
+  _pathKey(value) { const path = this._cleanPath(value).replace(/\/$/, ""); try { return decodeURIComponent(path); } catch (_) { return path; } }
+  _isSeriesPath(value) { return /^\/c\/[^/?#]+\/?(?:\?.*)?$/.test(value) || /^\/\d+\/[^?#]+/.test(value); }
+  _isEpisodePath(value) { return /^\/e\/[^/?#]+\/?(?:\?.*)?$/.test(value) || /^\/\d+\/[^?#]+/.test(value); }
+  _siteLink(base, value) {
+    const absolute = this._absoluteUrl(base + "/", value), origin = this._origin(absolute);
+    if (!origin || (origin.toLowerCase() !== this._origin(base).toLowerCase() && !this._isAllowedBaseUrl(origin))) return "";
+    return this._cleanPath(absolute);
+  }
+  _pageData(document) {
+    const app = document.selectFirst("#app[data-page]");
+    if (!app) return null;
+    try { return JSON.parse(this._text(app.attr("data-page"))); } catch (_) { return null; }
+  }
+  _nextPagePath(document, base, page, episodePath) {
+    const current = Math.max(1, Number(page) || 1);
+    const scope = episodePath ? document.selectFirst(".serial-list") : document.selectFirst("nav[aria-label='쪽 넘기기']");
+    const candidates = [];
+    if (scope) for (const a of scope.select("a[href]")) candidates.push(a);
+    for (const a of document.select("a[rel='next'][href], a[aria-label='다음 쪽'][href]")) candidates.push(a);
+    for (const a of candidates) {
+      const path = this._siteLink(base, a.attr("href")), match = path.match(/[?&]page=(\d+)/);
+      if (!path || !match || Number(match[1]) !== current + 1) continue;
+      if (episodePath && this._pathKey(path.split("?")[0]) !== this._pathKey(episodePath.split("?")[0])) continue;
+      return path;
     }
-    return { list, hasNextPage };
+    // Inertia InfiniteScroll puts the next episode page in props.scrollProps.
+    const data = this._pageData(document), props = data && data.props;
+    if (episodePath && props) {
+      const scroll = props.scrollProps && (props.scrollProps.episodes || props.scrollProps.chapters);
+      if (scroll && Number(scroll.nextPage) > current) {
+        const key = this._text(scroll.pageName || "page");
+        if (/^[a-zA-Z0-9_]+$/.test(key)) return episodePath.split("?")[0] + "?" + key + "=" + Number(scroll.nextPage);
+      }
+      const pager = props.episodes || props.chapters;
+      if (pager && typeof pager === "object") {
+        const next = pager.next_page_url || (pager.links && !Array.isArray(pager.links) && pager.links.next);
+        const path = next ? this._siteLink(base, next) : "";
+        if (path && this._pathKey(path.split("?")[0]) === this._pathKey(episodePath.split("?")[0])) return path;
+      }
+    }
+    return "";
   }
   _parseCards(document, base, paginated, page) {
-    const list = [], seen = {};
-    for (const item of document.select(".show-item")) {
-      const link = item.selectFirst("a.show-item-img-link[href]") || item.selectFirst(".show-item-tile-link[href]") || item.selectFirst("a[href]");
-      const title = item.selectFirst(".show-item-title"); const path = link ? this._relativePath(link.attr("href")) : ""; const name = title ? this._text(title.text).trim() : (link ? this._text(link.text).trim() : "");
-      if (!name || !/^\/\d+\//.test(path) || seen[path]) continue;
-      list.push({ name, link: this._versionedDetailPath(path), imageUrl: this._imageUrl(base, item.selectFirst("img")) }); seen[path] = true;
+    const list = [], seen = Object.create(null);
+    // Restrict cards to the catalogue grid; sidebar ranks repeat series links.
+    let items = document.select(".grid-wrap .row");
+    if (!items.length) items = document.select(".show-item");
+    for (const item of items) {
+      const a = item.selectFirst("a.img[href], a.desc[href], a.show-item-img-link[href], a.show-item-tile-link[href]") || item.selectFirst("a[href]");
+      const path = a ? this._siteLink(base, a.attr("href")) : "";
+      if (!this._isSeriesPath(path)) continue;
+      const img = item.selectFirst("img"), title = item.selectFirst(".ttl, .show-item-title");
+      const name = (title ? this._text(title.text).trim() : "") || (img ? this._text(img.attr("alt")).trim() : "") || this._titleFromPath(path, "/c/");
+      const key = this._pathKey(path);
+      if (!name || seen[key]) continue;
+      seen[key] = true;
+      list.push({ name, link: this._versionedDetailPath(path), imageUrl: this._imageUrl(base, img) });
     }
-    if (!list.length) return this._parseCurrentCards(document, base, page);
-    return { list, hasNextPage: paginated !== false && list.length >= 20 };
+    return { list, hasNextPage: paginated !== false && !!this._nextPagePath(document, base, page) };
   }
-  _apiUrl(base, page, template, catid, sort, genre, day) { return base + "/index.php?s=api&c=api&m=template&format=jsonp&name=" + template + ".html&catid=" + catid + "&order=" + encodeURIComponent(sort || "updatetime") + "&page=" + Math.max(1, Number(page) || 1) + "&keyword=" + encodeURIComponent(genre || "") + "&weeks=" + encodeURIComponent(day || ""); }
-  _yearPath(page, rule) { const catid = rule.yearKind === "movie" ? "2" : "1"; let range = ""; if (rule.year === "old") range = "1980-01-01,2012-12-31"; else if (rule.year) range = rule.year + "-01-01," + rule.year + "-12-31"; if (!range) return rule.yearKind === "movie" ? "/movie" : "/finished"; const encoded = encodeURIComponent(range); return Number(page) > 1 ? "/search/air_date-" + encoded + "-parent_id-0-catid-" + catid + "-page-" + Number(page) + ".html" : "/search/catid-" + catid + "-air_date-" + encoded + ".html"; }
+  _cataloguePath(kind) { return "/" + encodeURIComponent(kind === "movie" ? "극장판" : kind === "finished" ? "완결" : "방영중"); }
+  _catalogueUrl(base, page, rule, query) {
+    const n = rule || this._defaultLatestRule(), kind = n.mode === "year" ? n.yearKind : n.mode, params = [];
+    if (query) params.push("q=" + encodeURIComponent(query));
+    if (kind === "ongoing" && n.day) params.push("weekday=" + encodeURIComponent(this._nameFor(this.days, n.day, "")));
+    // Only weekday and page are visible as links in the supplied MHT files.
+    // These advanced query keys are isolated here because their live API was not verified.
+    if (n.genre) params.push("genre=" + encodeURIComponent(n.genre));
+    if (n.mode === "year" && n.year) params.push("year=" + encodeURIComponent(n.year));
+    const sort = n.sort === "hits" ? "rating_desc" : n.sort === "air_date" ? "released_desc" : "";
+    if (sort) params.push("sort=" + sort);
+    if (Number(page) > 1) params.push("page=" + Math.floor(Number(page)));
+    return base + this._cataloguePath(kind) + (params.length ? "?" + params.join("&") : "");
+  }
+  _seriesKind(document) {
+    const breadcrumb = document.selectFirst(".crumb");
+    if (breadcrumb) for (const a of breadcrumb.select("a[href]")) {
+      const value = this._text(a.text).trim();
+      if (value === "극장판") return "movie";
+      if (value === "완결") return "finished";
+      if (value === "방영중") return "ongoing";
+    }
+    const fields = this._detailFields(document);
+    return /방영중/.test(fields["총화수"] || "") ? "ongoing" : "";
+  }
+  _rankCards(document, base) {
+    const scope = document.selectFirst("#sidebar-tabpanel-popular");
+    if (!scope) return [];
+    const list = [], seen = Object.create(null);
+    for (const a of scope.select("a[href]")) {
+      const path = this._siteLink(base, a.attr("href"));
+      if (!this._isSeriesPath(path)) continue;
+      const key = this._pathKey(path), img = a.selectFirst("img"), title = a.selectFirst("p.truncate");
+      const name = (title ? this._text(title.text).trim() : "") || (img ? this._text(img.attr("alt")).trim() : "") || this._titleFromPath(path, "/c/");
+      if (!name || seen[key]) continue;
+      seen[key] = true;
+      list.push({ name, link: this._versionedDetailPath(path), imageUrl: this._imageUrl(base, img) });
+    }
+    return list;
+  }
   async _topList(base, kind, page) {
     if (Number(page) > 1) return { list: [], hasNextPage: false };
-    const path = kind === "movie" ? "/movie" : kind === "finished" ? "/finished" : "/ing";
-    const doc = new Document(await this._requestText(base + path, base + "/", "TOP5")); let scope = null;
-    const wanted = kind === "movie" ? "극장판 인기애니" : kind === "finished" ? "완결 인기애니" : "방영중 인기애니";
-    for (const section of doc.select(".top-movies-list")) if (this._text(section.text).replace(/\s+/g, "").indexOf(wanted.replace(/\s+/g, "")) >= 0) { scope = section; break; }
-    scope = scope || doc; const list = [], seen = {};
-    for (const link of scope.select("a[href]")) { const p = this._relativePath(link.attr("href")); const name = this._text(link.text).trim(); if (!/^\/\d+\//.test(p) || !name || seen[p]) continue; list.push({ name, link: this._versionedDetailPath(p), imageUrl: "" }); seen[p] = true; if (list.length === 5) break; }
-    for (let i = 0; i < list.length; i++) { try { const d = new Document(await this._requestText(base + list[i].link, base + path, "TOP5 표지")); list[i].imageUrl = this._imageUrl(base, d.selectFirst(".article-box-img img") || d.selectFirst("meta[property='og:image']")); } catch (_) {} }
-    return { list, hasNextPage: false };
+    const catalogueUrl = this._catalogueUrl(base, 1, { mode: kind });
+    let doc = new Document(await this._requestText(catalogueUrl, base + "/", "인기 순위"));
+    let ranked = this._rankCards(doc, base);
+    if (!ranked.length) {
+      const cards = this._parseCards(doc, base, false, 1).list;
+      if (!cards.length) return { list: [], hasNextPage: false };
+      doc = new Document(await this._requestText(base + this._cleanPath(cards[0].link), catalogueUrl, "인기 순위"));
+      ranked = this._rankCards(doc, base);
+    }
+    if (!ranked.length) throw new Error("현재 페이지에서 인기 작품 순위를 찾지 못했습니다.");
+    // The new sidebar is a combined ranking. Read the category before filtering it.
+    const checks = await Promise.all(ranked.map(async (item) => {
+      try {
+        const detail = new Document(await this._requestText(base + this._cleanPath(item.link), catalogueUrl, "인기 작품 분류"));
+        return this._seriesKind(detail) === kind ? item : null;
+      } catch (_) { return null; }
+    }));
+    return { list: checks.filter(Boolean).slice(0, 5), hasNextPage: false };
   }
   async _list(page, rule) {
     const n = this._normalizeRule(rule, this._defaultLatestRule()), base = await this._resolveBaseUrl();
-    if (n.mode === "ongoing" && n.sort === "updatetime") {
-      const currentPage = Math.max(1, Number(page) || 1), params = [];
-      if (n.day) params.push("weekday=" + encodeURIComponent(this._nameFor(this.days, n.day, "")));
-      if (currentPage > 1) params.push("page=" + currentPage);
-      const url = base + "/" + encodeURIComponent("방영중") + (params.length ? "?" + params.join("&") : "");
-      return this._parseCards(new Document(await this._requestText(url, base + "/", "방영중 목록")), base, true, currentPage);
-    }
     if (n.mode === "top") return this._topList(base, n.top, page);
-    if (n.mode === "year") { const url = base + this._yearPath(page, n); return this._parseCards(new Document(await this._requestText(url, base + "/", "연도별 목록")), base, true); }
-    const config = n.mode === "ongoing" ? ["ong", "3"] : n.mode === "movie" ? ["movie", "2"] : ["list", "1"];
-    const url = this._apiUrl(base, page, config[0], config[1], n.sort, n.genre, n.day);
-    return this._parseCards(new Document(this._jsonpHtml(await this._requestText(url, base + "/", "목록"))), base, true);
+    const url = this._catalogueUrl(base, page, n);
+    return this._parseCards(new Document(await this._requestText(url, base + "/", "목록")), base, true, page);
   }
   async _prependCard(result, page, tab) { if (Number(page) !== 1) return result; return { list: [await this._tabCard(undefined, tab)].concat(result.list || []), hasNextPage: result.hasNextPage === true }; }
   async getPopular(page) { return this._localizeResult(await this._prependCard(await this._list(page, this._tabRule(this.popularRulePreference, this._defaultPopularRule())), page, "popular")); }
@@ -418,52 +515,318 @@ class DefaultExtension extends MProvider {
   async search(query, page, filters) {
     const q = this._normalizeSearch(query);
     if (q) {
-      const base = await this._resolveBaseUrl(), compact = this._searchKey(q), words = [compact, q, compact.replace(/[0-9]+/g, ""), compact.slice(0, 3), compact.slice(0, 2)].filter(function(v, i, a) { return v && v.length >= 2 && a.indexOf(v) === i; }); let all = [], seen = {};
-      for (const word of words) { const url = base + "/search/keyword-" + encodeURIComponent(word) + ".html"; const r = this._parseCards(new Document(await this._requestText(url, base + "/", "검색")), base, true); for (const item of r.list) if (!seen[item.link]) { all.push(item); seen[item.link] = true; } if (all.length) break; }
-      all.sort((a, b) => { const ak = this._searchKey(a.name), bk = this._searchKey(b.name); const as = ak === compact ? 0 : ak.indexOf(compact) >= 0 || compact.indexOf(ak) >= 0 ? 1 : 2 + this._levenshtein(ak, compact); const bs = bk === compact ? 0 : bk.indexOf(compact) >= 0 || compact.indexOf(bk) >= 0 ? 1 : 2 + this._levenshtein(bk, compact); return as - bs; });
-      return this._localizeResult({ list: all, hasNextPage: all.length >= 20 });
+      const base = await this._resolveBaseUrl(), compact = this._searchKey(q), currentPage = Math.max(1, Number(page) || 1);
+      const words = [q, compact, compact.replace(/[0-9]+/g, ""), compact.slice(0, 3), compact.slice(0, 2)].filter((v, i, a) => v && a.indexOf(v) === i);
+      let all = [], hasNextPage = false;
+      for (const word of words) {
+        // Search every category so ongoing and movie results remain available.
+        // The q key is provisional because MHT snapshots omit the form's script.
+        const results = await Promise.all(["ongoing", "finished", "movie"].map(async (mode) => {
+          const url = this._catalogueUrl(base, currentPage, { mode }, word);
+          return this._parseCards(new Document(await this._requestText(url, base + "/", "검색")), base, true, currentPage);
+        }));
+        const seen = Object.create(null), wanted = this._searchKey(word);
+        all = []; hasNextPage = false;
+        for (const result of results) {
+          hasNextPage = hasNextPage || result.hasNextPage;
+          for (const item of result.list) {
+            const key = this._pathKey(item.link), titleKey = this._searchKey(item.name);
+            // Do not present an unfiltered catalogue if the server ignores q.
+            if (seen[key] || (wanted && titleKey.indexOf(wanted) < 0 && wanted.indexOf(titleKey) < 0)) continue;
+            seen[key] = true; all.push(item);
+          }
+        }
+        if (all.length) break;
+      }
+      all.sort((a, b) => {
+        const score = (name) => { const key = this._searchKey(name); return key === compact ? 0 : key.indexOf(compact) >= 0 || compact.indexOf(key) >= 0 ? 1 : 2 + this._levenshtein(key, compact); };
+        return score(a.name) - score(b.name);
+      });
+      return this._localizeResult({ list: all, hasNextPage });
     }
     const action = Number(this._filterValue(filters, "tabRuleAction", "0")); let rule = this._filterRule(filters); if (!rule && action >= 3 && action <= 5) rule = action === 3 ? this._defaultPopularRule() : this._defaultLatestRule(); if (!rule) throw new Error("애니24 필터에서 한 구역을 선택하세요."); const result = await this._list(page, rule); this._applyTabRuleAction(page, filters, rule); return this._localizeResult(result);
   }
 
-  _parseDate(text) { const s = this._text(text).trim(); const m = s.match(/(20\d{2})[-./](\d{1,2})[-./](\d{1,2})/); if (!m) return ""; return String(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime()); }
+  _parseDate(value) {
+    const m = this._text(value).match(/((?:19|20)\d{2})[-./](\d{1,2})[-./](\d{1,2})/);
+    if (!m) return "";
+    return String(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) - 9 * 60 * 60 * 1000);
+  }
+  _detailFields(document) {
+    const fields = Object.create(null);
+    for (const p of document.select(".view-info .list > p")) {
+      const spans = p.select("span.block");
+      if (spans.length < 2) continue;
+      const key = this._text(spans[0].text).trim();
+      const value = spans.slice(1).map((n) => this._text(n.text).trim()).filter(Boolean).join(" ");
+      if (key && value) fields[key] = value;
+    }
+    return fields;
+  }
   _parseEpisodes(document) {
-    const episodes = [], seen = {};
-    for (const item of document.select(".eps-box .eps-item")) {
-      const a = item.selectFirst("a[href]"); if (!a) continue;
-      const path = this._relativePath(a.attr("href")); if (!path || seen[path]) continue;
-      const name = this._text(a.text).trim() || "재생", date = item.selectFirst(".eps-date");
-      episodes.push({ name, url: path, dateUpload: date ? this._parseDate(date.text) : "" }); seen[path] = true;
+    const episodes = [], seen = Object.create(null);
+    let items = document.select(".serial-list .list-body .list-item");
+    if (!items.length) items = document.select(".eps-box .eps-item");
+    for (const item of items) {
+      const a = item.selectFirst("a.item-subject[href]") || item.selectFirst("a[href]");
+      if (!a) continue;
+      const path = this._cleanPath(a.attr("href")), key = this._pathKey(path);
+      if (!this._isEpisodePath(path) || seen[key]) continue;
+      const date = item.selectFirst(".wr-date, .eps-date");
+      const name = this._text(a.text).trim() || this._titleFromPath(path, "/e/") || "재생";
+      episodes.push({ name, url: path, dateUpload: date ? this._parseDate(date.text) : "" });
+      seen[key] = true;
     }
     if (episodes.length) return episodes;
-    for (const a of document.select("a[href]")) {
-      const path = this._relativePath(a.attr("href")).replace(/[?#].*$/, "");
-      if (!/^\/e\/[^/]+\/?$/.test(path) || seen[path]) continue;
-      const name = this._titleFromPath(path.replace(/\/$/, ""), "/e/");
-      if (!name) continue;
-      episodes.push({ name, url: path, dateUpload: "" }); seen[path] = true;
+    // Fallback for an empty/changed serial-list; never include a sidebar episode.
+    const scope = document.selectFirst(".serial-list") || document.selectFirst(".oh-main") || document;
+    for (const a of scope.select("a[href]")) {
+      const path = this._cleanPath(a.attr("href")), key = this._pathKey(path);
+      if (!/^\/e\/[^/?#]+/.test(path) || seen[key]) continue;
+      episodes.push({ name: this._text(a.text).trim() || this._titleFromPath(path, "/e/"), url: path, dateUpload: "" });
+      seen[key] = true;
     }
-    // The new detail page repeats its first episode in a separate play button.
-    const number = function(item) { const m = item.name.match(/(\d+(?:\.\d+)?)\s*화\s*$/); return m ? Number(m[1]) : null; };
-    if (episodes.length && episodes.every(function(item) { return number(item) !== null; })) episodes.sort(function(a, b) { return number(b) - number(a); });
+    const number = (item) => { const match = item.name.match(/(\d+(?:\.\d+)?)\s*화\s*$/); return match ? Number(match[1]) : null; };
+    if (episodes.length && episodes.every((item) => number(item) !== null)) episodes.sort((a, b) => number(b) - number(a));
     return episodes;
+  }
+  async _allEpisodes(document, base, path) {
+    const episodes = this._parseEpisodes(document), seen = Object.create(null), visited = Object.create(null);
+    for (const item of episodes) seen[this._pathKey(item.url)] = true;
+    let doc = document, page = Number((path.match(/[?&]page=(\d+)/) || [])[1]) || 1;
+    visited[this._pathKey(path)] = true;
+    for (let count = 0; count < 100; count++) {
+      const next = this._nextPagePath(doc, base, page, path);
+      if (!next || visited[this._pathKey(next)]) return episodes;
+      visited[this._pathKey(next)] = true;
+      doc = new Document(await this._requestText(base + next, base + path, "회차 목록"));
+      const batch = this._parseEpisodes(doc);
+      if (!batch.length) return episodes;
+      for (const item of batch) {
+        const key = this._pathKey(item.url);
+        if (!seen[key]) { episodes.push(item); seen[key] = true; }
+      }
+      page = Number((next.match(/[?&](?:page|episodes_page)=(\d+)/) || [])[1]) || page + 1;
+    }
+    throw new Error("회차 목록이 100페이지를 초과했습니다. 원본 페이지에서 목록을 확인해 주세요.");
   }
   async getDetail(url) {
     const card = this._text(url).match(/\/__ani24_weekday_card__\/(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/);
-    if (card) { const item = await this._tabCard(card[1]); return { name: item.name, link: item.link, imageUrl: item.imageUrl, author: "애니24", description: "오늘의 시간 흐름을 담은 움직이는 요일 카드입니다. 뒤로 돌아가 작품을 선택해 주세요.", genre: ["요일 안내"], status: 0, episodes: [], chapters: [] }; }
-    const base = await this._resolveBaseUrl(), path = this._relativePath(url); if (!/^\/(?:\d+\/|c\/[^/?#]+)/.test(path)) throw new Error("잘못된 애니24 작품 주소입니다."); const doc = new Document(await this._requestText(base + path, base + "/", "상세"));
-    const title = doc.selectFirst(".list-content > .top-movies-list-title h2") || doc.selectFirst("h1") || doc.selectFirst("meta[property='og:title']"); if (!title) throw new Error("작품 제목을 찾지 못했습니다.");
-    const meta = doc.select(".article-box-meta li").map((n) => this._text(n.text).trim()).filter(Boolean); const genres = doc.select(".article-box-meta a[href*='keyword-']").map((n) => this._text(n.text).trim()).filter(Boolean); const cover = doc.selectFirst(".article-box-img img") || doc.selectFirst("meta[property='og:image']"); const desc = doc.selectFirst(".movie-coment"); const episodes = this._parseEpisodes(doc);
+    if (card) {
+      const item = await this._tabCard(card[1]);
+      return { name: item.name, link: item.link, imageUrl: item.imageUrl, author: "애니24", description: "오늘의 시간 흐름을 담은 움직이는 요일 카드입니다. 뒤로 돌아가 작품을 선택해 주세요.", genre: ["요일 안내"], status: 0, episodes: [], chapters: [] };
+    }
+    const base = await this._resolveBaseUrl(), path = this._cleanPath(url);
+    if (!this._isSeriesPath(path)) throw new Error("잘못된 애니24 작품 주소입니다.");
+    const doc = new Document(await this._requestText(base + path, base + "/", "상세"));
+    const title = doc.selectFirst(".view-title h1, .list-content > .top-movies-list-title h2") || doc.selectFirst("h1") || doc.selectFirst("meta[property='og:title']");
+    if (!title) throw new Error("작품 제목을 찾지 못했습니다.");
+    const original = this._text(title.attr("content") || title.text).trim(), fields = this._detailFields(doc);
+    const oldMeta = doc.select(".article-box-meta li").map((n) => this._text(n.text).trim()).filter(Boolean);
+    const genreText = fields["장르"] || "";
+    const genres = genreText ? genreText.split(/\s*[,，、]\s*/).filter(Boolean) : doc.select(".article-box-meta a[href*='keyword-']").map((n) => this._text(n.text).trim()).filter(Boolean);
+    const cover = doc.selectFirst(".view-info .image img, .article-box-img img") || doc.selectFirst("meta[property='og:image']");
+    const desc = doc.selectFirst(".view-stocon, .movie-coment");
+    const meta = Object.keys(fields).map((key) => key + ": " + fields[key]);
+    const episodes = await this._allEpisodes(doc, base, path), kind = this._seriesKind(doc);
     const detailLanguage = await this._freshDetailTitleLanguage();
-    return { name: await this._localizedTitle(this._text(title.attr && title.attr("content") ? title.attr("content") : title.text).trim(), detailLanguage), link: path, imageUrl: cover && cover.attr("content") ? this._absoluteUrl(base, cover.attr("content")) : this._imageUrl(base, cover), author: "", description: desc ? this._text(desc.text).trim() : meta.join("\n"), genre: genres, status: meta.join(" ").indexOf("완결") >= 0 ? 1 : 0, episodes, chapters: episodes };
+    // Prefer the site's exact Japanese original title, and reuse it on list refresh.
+    const nativeTitle = this._text(fields["원제"]).trim();
+    if (/[ぁ-んァ-ヶ一-龯]/.test(nativeTitle)) {
+      const key = this.titleCachePrefix + this._titleCacheToken(original);
+      this._setPreferenceString(key, JSON.stringify({ ko: original, ja: nativeTitle, confidence: 600 }));
+      this._setPreferenceString(key + "_time", String(Date.now()));
+    }
+    const story = desc ? this._text(desc.text).trim() : "";
+    return {
+      name: detailLanguage === "ja" && /[ぁ-んァ-ヶ一-龯]/.test(nativeTitle) ? nativeTitle : await this._localizedTitle(original, detailLanguage),
+      link: path,
+      imageUrl: cover && cover.attr("content") ? this._absoluteUrl(base, cover.attr("content")) : this._imageUrl(base, cover),
+      author: fields["원작"] || fields["감독"] || "",
+      description: [story, (meta.length ? meta : oldMeta).join("\n")].filter(Boolean).join("\n\n"),
+      genre: genres,
+      status: kind === "finished" || kind === "movie" || oldMeta.join(" ").indexOf("완결") >= 0 ? 1 : 0,
+      episodes, chapters: episodes
+    };
   }
-  _iframeUrls(doc, base) { const out = [], seen = {}; for (const n of doc.select("iframe#video[src], iframe[src*='michealcdn']")) { const u = this._absoluteUrl(base, n.attr("src")); if (u && !seen[u]) { out.push(u); seen[u] = true; } } return out; }
-  _hlsVariants(master, masterUrl, server) { const lines = this._text(master).split(/\r?\n/), out = []; for (let i = 0; i < lines.length; i++) { if (lines[i].indexOf("#EXT-X-STREAM-INF:") !== 0) continue; let next = ""; for (let j = i + 1; j < lines.length; j++) if (lines[j].trim() && lines[j].indexOf("#") !== 0) { next = lines[j].trim(); break; } if (!next) continue; const info = lines[i]; const name = (info.match(/NAME="?([^",]+)/i) || [])[1]; const height = (info.match(/RESOLUTION=\d+x(\d+)/i) || [])[1]; const quality = (name || (height ? height + "p" : "자동")) + " · 서버 " + server, streamUrl = this._absoluteUrl(masterUrl, next); out.push({ url: streamUrl, originalUrl: this._hlsOriginalUrl(streamUrl), quality }); } return out; }
+  _iframeUrls(doc, base, embedded) {
+    const out = [], seen = Object.create(null);
+    const selectors = ".anime-reader iframe[src], .anime-reader iframe[data-src], iframe[title='회차 영상 플레이어'][src], iframe#video[src], iframe[src*='michealcdn'], iframe[src*='cdndania.com/video/']";
+    const nodes = doc.select(selectors + (embedded ? ", .player iframe[src], iframe[src*='/video/']" : ""));
+    for (const n of nodes) {
+      const url = this._absoluteUrl(base, n.attr("data-src") || n.attr("src"));
+      if (!/^https?:\/\//i.test(url) || seen[url]) continue;
+      seen[url] = true;
+      out.push(url);
+    }
+    // SSR may expose server choices in Inertia props before rendering an iframe.
+    const page = this._pageData(doc);
+    const scan = (value, depth) => {
+      if (!value || typeof value !== "object" || depth > 6) return;
+      if (Array.isArray(value)) { for (const item of value) scan(item, depth + 1); return; }
+      for (const key of Object.keys(value)) {
+        const raw = value[key];
+        if (/^(?:embed_?url|player_?url|iframe_?url|embed)$/i.test(key) && typeof raw === "string") {
+          const url = this._absoluteUrl(base, raw);
+          if (url && !seen[url]) { out.push(url); seen[url] = true; }
+        } else if (raw && typeof raw === "object") scan(raw, depth + 1);
+      }
+    };
+    if (page && page.props) scan(page.props, 0);
+    return out;
+  }
+  _hlsVariants(master, masterUrl, server) {
+    const lines = this._text(master).replace(/^\uFEFF/, "").split(/\r?\n/), out = [];
+    for (let i = 0; i < lines.length; i++) {
+      const info = lines[i].trim();
+      if (info.indexOf("#EXT-X-STREAM-INF:") !== 0) continue;
+      let next = "";
+      for (let j = i + 1; j < lines.length; j++) {
+        const line = lines[j].trim();
+        if (line.indexOf("#EXT-X-STREAM-INF:") === 0) break;
+        if (line && line.indexOf("#") !== 0) { next = line; break; }
+      }
+      if (!next) continue;
+      const name = (info.match(/NAME="([^"]+)"/i) || [])[1];
+      const height = (info.match(/RESOLUTION=\d+x(\d+)/i) || [])[1];
+      const streamUrl = this._absoluteUrl(masterUrl, next);
+      if (!streamUrl) continue;
+      out.push({ url: streamUrl, originalUrl: this._hlsOriginalUrl(streamUrl), quality: (height ? height + "p" : name || "자동") + " · 서버 " + server });
+    }
+    return out;
+  }
+  _mediaEntries(data, base) {
+    const entries = [], seen = Object.create(null);
+    const add = (raw, label, type, allowUnknown) => {
+      const url = this._absoluteUrl(base, raw);
+      if (!url || seen[url] || (!allowUnknown && !/\.(?:m3u8?|mp4|webm|mkv)(?:[?#]|$)/i.test(url))) return;
+      seen[url] = true;
+      entries.push({ url, label: this._text(label), type: this._text(type) });
+    };
+    const visit = (value, depth, allowString) => {
+      if (!value || depth > 6) return;
+      if (typeof value === "string") { if (allowString) add(value, "", "", true); return; }
+      if (Array.isArray(value)) { for (const item of value) visit(item, depth + 1, allowString); return; }
+      if (typeof value !== "object") return;
+      const label = value.label || value.quality || value.resolution || "", type = value.type || value.mimeType || "";
+      for (const key of ["securedLink", "link", "file", "src", "url", "videoUrl", "video_url", "streamUrl", "stream_url", "hls"]) {
+        if (typeof value[key] === "string") add(value[key], label, type, key === "securedLink" || key === "link" || !!type);
+      }
+      for (const key of ["data", "sources", "source", "playlist", "videos", "video"]) if (value[key]) visit(value[key], depth + 1, true);
+    };
+    visit(data, 0, false);
+    return entries;
+  }
+  _directMedia(doc, body, base, episode) {
+    const entries = [], seen = Object.create(null);
+    const add = (raw, label, type) => {
+      const url = this._absoluteUrl(base, raw);
+      if (!url || seen[url] || /^blob:|^data:|^cid:/i.test(raw)) return;
+      seen[url] = true;
+      entries.push({ url, label: this._text(label), type: this._text(type) });
+    };
+    const scope = episode ? doc.selectFirst(".anime-reader") : doc;
+    if (scope) for (const n of scope.select("video[src], video source[src]")) add(n.attr("src"), n.attr("label"), n.attr("type"));
+    for (const script of doc.select("script")) {
+      const text = this._text(script.text);
+      if (this._text(script.attr("type")) === "application/json") {
+        try { for (const item of this._mediaEntries(JSON.parse(text), base)) add(item.url, item.label, item.type); } catch (_) {}
+      }
+      const regex = /(?:file|source|src|securedLink|hls)\s*["']?\s*[:=]\s*["']([^"'<>\r\n]+)["']/gi;
+      let match;
+      while ((match = regex.exec(text))) {
+        const value = this._decodeTitleText(match[1]).replace(/\\\//g, "/");
+        if (/\.(?:m3u8?|mp4|webm|mkv)(?:[?#]|$)/i.test(value)) add(value, "", "");
+      }
+    }
+    const page = this._pageData(doc);
+    if (page && page.props) for (const key of ["video", "player", "episode", "sources"]) {
+      for (const item of this._mediaEntries(page.props[key], base)) add(item.url, item.label, item.type);
+    }
+    return entries;
+  }
+  async _videosForMedia(entry, referer, server) {
+    const url = entry.url, origin = this._origin(referer), headers = { "User-Agent": this.userAgent, "Referer": referer, "Origin": origin };
+    const isFile = /\.(?:mp4|webm|mkv)(?:[?#]|$)/i.test(url) || /^(?:video\/(?:mp4|webm)|mp4|webm)$/i.test(entry.type);
+    const isHls = /\.(?:m3u8|m3u)(?:[?#]|$)/i.test(url) || /hls|mpegurl/i.test(entry.type);
+    let variants = [], playlist = "";
+    if (!isFile) {
+      try {
+        // Unknown secured links are probed with a range to avoid downloading a video.
+        playlist = await this._requestText(url, referer, "재생목록", Object.assign({}, headers, isHls ? {} : { Range: "bytes=0-65535" }));
+        if (/^\s*#EXTM3U/.test(playlist.replace(/^\uFEFF/, ""))) variants = this._hlsVariants(playlist, url, server);
+        else if (isHls) throw new Error("HLS 주소에서 재생목록이 반환되지 않았습니다.");
+      } catch (error) {
+        // Keep the original HLS URL when a manifest request is blocked; the player
+        // can retry with its own HTTP stack, cookies and playback headers.
+        if (!isHls) playlist = "";
+      }
+    }
+    const hls = isHls || /^\s*#EXTM3U/.test(playlist.replace(/^\uFEFF/, ""));
+    if (!variants.length) variants.push({ url, originalUrl: hls ? this._hlsOriginalUrl(url) : url, quality: (entry.label || "자동") + " · 서버 " + server });
+    for (const video of variants) { video.headers = headers; video.subtitles = []; }
+    return variants;
+  }
+  async _resolvePlayer(iframe, episodeUrl, server, visited, depth) {
+    if (depth > 3 || visited[iframe]) return [];
+    visited[iframe] = true;
+    const origin = this._origin(iframe), clean = iframe.split(/[?#]/)[0];
+    let id = (clean.match(/\/([a-f0-9]{16,})\/?$/i) || [])[1] || (iframe.match(/[?&](?:data|hash)=([a-f0-9]{16,})/i) || [])[1] || "";
+    let html = "", doc = null, direct = [], apiError = "";
+    const api = async () => {
+      const body = await this._postForm(origin + "/player/index.php?data=" + encodeURIComponent(id) + "&do=getVideo", { hash: id, r: "" }, iframe);
+      let payload;
+      try { payload = JSON.parse(body); } catch (_) { throw new Error("재생 서버가 영상 JSON을 반환하지 않았습니다."); }
+      const entries = this._mediaEntries(payload, iframe);
+      if (!entries.length) throw new Error("재생 서버 응답에 영상 주소가 없습니다.");
+      return entries;
+    };
+    // The supplied episode MHT points to cdndania.com/video/<32-character hash>.
+    // Retain the original FirePlayer getVideo protocol for this server family.
+    if (id) { try { direct = await api(); } catch (error) { apiError = this._text(error.message || error); } }
+    if (!direct.length) {
+      html = await this._requestText(iframe, episodeUrl, "재생 서버");
+      doc = new Document(html);
+      direct = this._directMedia(doc, html, iframe, false);
+      if (!direct.length) {
+        const match = html.match(/FirePlayer\s*\(\s*["']([^"']+)["']/i);
+        if (match && /^[a-zA-Z0-9_-]+$/.test(match[1])) {
+          id = match[1];
+          try { direct = await api(); } catch (error) { apiError = this._text(error.message || error); }
+        }
+      }
+    }
+    const videos = [];
+    for (const entry of direct) Array.prototype.push.apply(videos, await this._videosForMedia(entry, iframe, server));
+    if (!videos.length && doc) {
+      for (const child of this._iframeUrls(doc, iframe, true)) {
+        try { Array.prototype.push.apply(videos, await this._resolvePlayer(child, iframe, server, visited, depth + 1)); } catch (_) {}
+      }
+    }
+    if (!videos.length && apiError) throw new Error(apiError);
+    return videos;
+  }
   async getVideoList(url) {
-    const base = await this._resolveBaseUrl(), episodeUrl = base + this._relativePath(url), doc = new Document(await this._requestText(episodeUrl, base + "/", "회차")), iframes = this._iframeUrls(doc, episodeUrl);
-    const results = await Promise.all(iframes.map(async (iframe, i) => { try { const origin = this._origin(iframe); let id = iframe.split(/[?#]/)[0].split("/").filter(Boolean).pop() || ""; if (!/^[a-f0-9]{16,}$/i.test(id)) { const embedded = await this._requestText(iframe, episodeUrl, "재생"); const m = embedded.match(/FirePlayer\s*\(\s*["']([^"']+)/i); if (m) id = m[1]; } if (!id) return { videos: [], error: "" }; const data = JSON.parse(await this._postForm(origin + "/player/index.php?data=" + encodeURIComponent(id) + "&do=getVideo", { hash: id, r: "" }, iframe)); const masterUrl = this._absoluteUrl(iframe, data.securedLink || data.link || ""); if (!masterUrl) return { videos: [], error: "" }; const master = await this._requestText(masterUrl, iframe, "재생목록"); let variants = this._hlsVariants(master, masterUrl, i + 1); if (!variants.length) variants = [{ url: masterUrl, originalUrl: this._hlsOriginalUrl(masterUrl), quality: "자동 · 서버 " + (i + 1) }]; for (const v of variants) { v.headers = { "User-Agent": this.userAgent, "Referer": origin + "/", "Origin": origin }; v.subtitles = []; } return { videos: variants, error: "" }; } catch (e) { return { videos: [], error: this._text(e && (e.message || e)) }; } }));
-    const videos = [], errors = []; for (const result of results) { Array.prototype.push.apply(videos, result.videos); if (result.error) errors.push(result.error); }
-    if (!videos.length) throw new Error("이 회차의 재생 주소를 찾지 못했습니다. WebView에서 원본 재생 여부를 확인해 주세요." + (errors.length ? " (" + errors[0] + ")" : "")); return videos;
+    const base = await this._resolveBaseUrl(), path = this._cleanPath(url);
+    if (!this._isEpisodePath(path)) throw new Error("잘못된 애니24 회차 주소입니다.");
+    const episodeUrl = base + path, body = await this._requestText(episodeUrl, base + "/", "회차"), doc = new Document(body);
+    const iframes = this._iframeUrls(doc, episodeUrl, false), direct = this._directMedia(doc, body, episodeUrl, true);
+    const tasks = iframes.map((iframe, index) => async () => this._resolvePlayer(iframe, episodeUrl, index + 1, Object.create(null), 0));
+    if (direct.length) tasks.push(async () => {
+      const videos = [];
+      for (const entry of direct) Array.prototype.push.apply(videos, await this._videosForMedia(entry, episodeUrl, iframes.length + 1));
+      return videos;
+    });
+    const results = await Promise.all(tasks.map(async (task) => {
+      try { return { videos: await task(), error: "" }; } catch (error) { return { videos: [], error: this._text(error.message || error) }; }
+    }));
+    const videos = [], seen = Object.create(null), errors = [];
+    for (const result of results) {
+      for (const video of result.videos) if (video.url && !seen[video.url]) { videos.push(video); seen[video.url] = true; }
+      if (result.error) errors.push(result.error);
+    }
+    if (!videos.length) throw new Error("이 회차의 재생 주소를 찾지 못했습니다. 원본 페이지에서 서버 상태를 확인해 주세요." + (errors.length ? " (" + errors.join(" / ") + ")" : ""));
+    return videos;
   }
   async getPageList() { return []; }
   async getHtmlContent() { return ""; }
@@ -474,7 +837,7 @@ class DefaultExtension extends MProvider {
   getFilterList() {
     const o = this._option.bind(this), options = function(pairs) { return [o("선택하세요", "__unset__")].concat(pairs.map(function(p) { return o(p[0], p[1]); })); }, sep = function(type) { return { type, name: "", type_name: "SeparatorFilter" }; }, head = function(type, name) { return { type, name, type_name: "HeaderFilter" }; };
     const pop = this._tabRule(this.popularRulePreference, this._defaultPopularRule()), latest = this._tabRule(this.latestRulePreference, this._defaultLatestRule());
-    return [sep("s1"), head("h1", "방영중"), this._select("ongoingDay", "요일", options(this.days)), this._select("ongoingSort", "정렬", options(this.sorts)), sep("s2"), head("h2", "완결"), this._select("finishedGenre", "장르", options(this.genres)), this._select("finishedSort", "정렬", options(this.sorts)), sep("s3"), head("h3", "극장판"), this._select("movieGenre", "장르", options(this.genres)), this._select("movieSort", "정렬", options(this.sorts)), sep("s4"), head("h4", "연도별"), this._select("yearValue", "연도별", options(this.years)), this._select("yearKind", "구분", options(this.yearKinds)), sep("s5"), head("h5", "TOP5 (사이트의 현재 순위를 실시간 반영)"), this._select("topKind", "TOP5", options(this.topKinds)), sep("s6"), head("saveHelp", "조건을 고른 뒤 Filter 버튼을 누르면 결과를 보고 Popular/Latest 탭 규칙으로 저장할 수 있습니다."), head("cardHelp", "목록 카드는 Popular/Latest 1번에만 표시되며 필터 결과와 글자 검색에서는 숨깁니다."), head("popularSummary", "현재 Popular: " + this._ruleSummary(pop)), head("latestSummary", "현재 Latest: " + this._ruleSummary(latest)), this._select("tabRuleAction", "Popular/Latest 규칙", [o("저장하지 않음 (필터 결과만 보기)", "0"), o("현재 조건을 Popular 탭에 저장", "1"), o("현재 조건을 Latest 탭에 저장", "2"), o("Popular 탭을 기본값으로 복원", "3"), o("Latest 탭을 기본값으로 복원", "4"), o("두 탭 모두 기본값으로 복원", "5")])];
+    return [sep("s1"), head("h1", "방영중"), this._select("ongoingDay", "요일", options(this.days)), this._select("ongoingSort", "정렬", options(this.sorts)), sep("s2"), head("h2", "완결"), this._select("finishedGenre", "장르", options(this.genres)), this._select("finishedSort", "정렬", options(this.sorts)), sep("s3"), head("h3", "극장판"), this._select("movieGenre", "장르", options(this.genres)), this._select("movieSort", "정렬", options(this.sorts)), sep("s4"), head("h4", "연도별"), this._select("yearValue", "연도별", options(this.years)), this._select("yearKind", "구분", options(this.yearKinds)), sep("s5"), head("h5", "TOP5 (현재 인기 위젯에서 구분별 최대 5개)"), this._select("topKind", "TOP5", options(this.topKinds)), sep("s6"), head("saveHelp", "조건을 고른 뒤 Filter 버튼을 누르면 결과를 보고 Popular/Latest 탭 규칙으로 저장할 수 있습니다."), head("cardHelp", "목록 카드는 Popular/Latest 1번에만 표시되며 필터 결과와 글자 검색에서는 숨깁니다."), head("popularSummary", "현재 Popular: " + this._ruleSummary(pop)), head("latestSummary", "현재 Latest: " + this._ruleSummary(latest)), this._select("tabRuleAction", "Popular/Latest 규칙", [o("저장하지 않음 (필터 결과만 보기)", "0"), o("현재 조건을 Popular 탭에 저장", "1"), o("현재 조건을 Latest 탭에 저장", "2"), o("Popular 탭을 기본값으로 복원", "3"), o("Latest 탭을 기본값으로 복원", "4"), o("두 탭 모두 기본값으로 복원", "5")])];
   }
-  getSourcePreferences() { return [{ key: "ani24_title_language_v2", listPreference: { title: "작품 제목 언어", summary: "한국어와 일본어 중에서 선택합니다. 변경 후 현재 화면을 새로고침하세요. Anissia에서 매칭되지 않는 작품은 한국어를 유지합니다.", valueIndex: 0, entries: ["한국어", "일본어"], entryValues: ["ko", "ja"] } }, { key: "ani24_domain_url", editTextPreference: { title: "애니24 주소 직접 지정 (선택)", summary: "빈 값이면 토끼 중앙신호등의 검증된 최신 주소를 사용합니다.", value: "", dialogTitle: "https://ani.ohli24.com", dialogMessage: "자동 주소를 사용하려면 빈 값으로 두세요." } }, { key: "ani24_custom_card_json_url", editTextPreference: { title: "커스텀 목록 카드 (선택)", summary: "공개 JSON 주소 1개로 요일별 카드 7장을 설정합니다. 360×540 GIF를 권장하며 용량·프레임 제한은 없습니다.", value: "", dialogTitle: "커스텀 목록 카드 JSON 주소", dialogMessage: "Google Drive 공개 공유 링크 또는 직접 JSON 주소를 넣으세요. 개인 카드를 설정하면 공용 이벤트 카드는 표시되지 않습니다. 빈 값이면 공용 이벤트 또는 기본 미디어 요일 카드를 사용합니다." } }]; }
+  getSourcePreferences() { return [{ key: "ani24_title_language_v2", listPreference: { title: "작품 제목 언어", summary: "한국어와 일본어 중에서 선택합니다. 변경 후 현재 화면을 새로고침하세요. Anissia에서 매칭되지 않는 작품은 한국어를 유지합니다.", valueIndex: 0, entries: ["한국어", "일본어"], entryValues: ["ko", "ja"] } }, { key: "ani24_domain_url", editTextPreference: { title: "애니24 주소 직접 지정 (선택)", summary: "빈 값이면 ani.ohli24.com을 사용합니다. 기존 ohli24.net 주소는 자동으로 변환합니다.", value: "", dialogTitle: "https://ani.ohli24.com", dialogMessage: "자동 주소를 사용하려면 빈 값으로 두세요." } }, { key: "ani24_custom_card_json_url", editTextPreference: { title: "커스텀 목록 카드 (선택)", summary: "공개 JSON 주소 1개로 요일별 카드 7장을 설정합니다. 360×540 GIF를 권장하며 용량·프레임 제한은 없습니다.", value: "", dialogTitle: "커스텀 목록 카드 JSON 주소", dialogMessage: "Google Drive 공개 공유 링크 또는 직접 JSON 주소를 넣으세요. 개인 카드를 설정하면 공용 이벤트 카드는 표시되지 않습니다. 빈 값이면 공용 이벤트 또는 기본 미디어 요일 카드를 사용합니다." } }]; }
 }
