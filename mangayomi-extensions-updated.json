@@ -122,7 +122,7 @@
     "hasCloudflare": false,
     "sourceCodeUrl": "https://raw.githubusercontent.com/wsun1023/mangayomi/main/reanime.js",
     "apiUrl": "",
-    "version": "0.1.2",
+    "version": "0.1.5",
     "isManga": false,
     "itemType": 1,
     "isFullData": false,
