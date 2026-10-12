@@ -12,7 +12,7 @@ const mangayomiSources = [
     "isNsfw": false,
     "hasCloudflare": false,
     "sourceCodeUrl":
-      "https://raw.githubusercontent.com/Mallyd11/mangayomi-anime-extensions/refs/heads/main/javascript/anime/src/en/reanime.js",
+      "https://raw.githubusercontent.com/wsun1023/mangayomi/main/reanime.js",
     "apiUrl": "https://reanime.cz",
     "version": "0.1.5",
     "isManga": false,
