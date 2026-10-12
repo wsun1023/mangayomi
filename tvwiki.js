@@ -1,18 +1,25 @@
 const mangayomiSources = [{
   name: "티비위키",
-  lang: "ko",
+  id: 780920260915001,
   baseUrl: "https://tvwiki53.net",
-  apiUrl: "",
-  iconUrl: "https://dc-toki-mangayomi-media.pages.dev/icon/ko.tvwiki.png",
+  lang: "ko",
   typeSource: "single",
-  itemType: 1,
-  isNsfw: false,
-  hasCloudflare: false,
-  version: "0.2.0",
+  iconUrl: "https://dc-toki-mangayomi-media.pages.dev/icon/ko.tvwiki.png",
   dateFormat: "",
   dateFormatLocale: "",
+  isNsfw: false,
+  hasCloudflare: false,
+  sourceCodeUrl: "https://raw.githubusercontent.com/wsun1023/mangayomi/main/tvwiki.js",
+  apiUrl: "",
+  version: "0.2.0",
+  isManga: false,
+  itemType: 1,
+  isFullData: false,
+  appMinVerReq: "0.9.3",
+  additionalParams: "",
+  sourceCodeLanguage: 1,
   pkgPath: "anime/src/ko/tvwiki.js",
-  notes: "검색 카드 작품 설명 우선 · 회차형 최신 줄거리 제외 · 인기/최신 탭 규칙 저장 · 커스텀 목록 카드 · WebP 공용 랜덤 카드 · 목록 구분 카드 6종 · 주간 TOP 100 회차 전수 보강 · 작품명/특별편 누락 수정 · 순차 HTTP 요청으로 403 알림 억제 · 중앙신호등 최신 주소 · 빠른 CDN 직접 재생 + 호환 중계 재생"
+  notes: "최신 tvwiki53.net 도메인 반영 · 검색 카드 작품 설명 우선 · 회차형 최신 줄거리 제외 · 인기/최신 탭 규칙 저장 · 커스텀 목록 카드 · WebP 공용 랜덤 카드 · 목록 구분 카드 6종 · 주간 TOP 100 회차 전수 보강 · 작품명/특별편 누락 수정 · 순차 HTTP 요청으로 403 알림 억제 · 중앙신호등 최신 주소 · 빠른 CDN 직접 재생 + 호환 중계 재생"
 }];
 
 function dcResolveTvwikiRemoteCards(data, tab) {
@@ -663,7 +670,14 @@ class DefaultExtension extends MProvider {
       const sourceName = this._normalize((link && (link.attr("title") || link.text)) || item.text);
       const name = this._episodeDisplayName(sourceName);
       const info = item.selectFirst(".date, .datetime, time");
-      episodes.push({ name: name || "회차", url: episodePath, dateUpload: this._parseDate(info ? info.text : item.text), _sourceName: sourceName });
+      const episodeThumb = this._image(base, item.selectFirst("img")) || null;
+      episodes.push({
+        name: name || "회차",
+        url: episodePath,
+        dateUpload: this._parseDate(info ? info.text : item.text),
+        thumbnailUrl: episodeThumb,
+        _sourceName: sourceName
+      });
       seen[episodePath] = true;
     }
     this._assignEpisodeVariants(episodes, seriesTitle);
