@@ -1,1454 +1,1433 @@
-/**
- * Re:ANIME (reanime.to) Mangayomi Extension
- * Generated & bundled with CryptoJS & pure-JS WASM/AES Decryptor.
- */
-var CryptoJS = (function() {
-  var exports = undefined;
-  var module = undefined;
-  var define = undefined;
-  var globalObj = (typeof globalThis !== 'undefined') ? globalThis : ((typeof window !== 'undefined') ? window : this);
-!function(t,e){"object"==typeof exports?module.exports=exports=e():"function"==typeof define&&define.amd?define([],e):t.CryptoJS=e()}(this,function(){var W,O,I,U,K,X,L,l,j,T,t,N,q,e,Z,V,G,J,Q,Y,$,t1,e1,r1,i1,o1,n1,s,s1,c1,a1,h1,l1,o,f1,r,d1,u1,n,c,a,h,f,d,i=function(h){var i;if("undefined"!=typeof window&&window.crypto&&(i=window.crypto),"undefined"!=typeof self&&self.crypto&&(i=self.crypto),!(i=!(i=!(i="undefined"!=typeof globalThis&&globalThis.crypto?globalThis.crypto:i)&&"undefined"!=typeof window&&window.msCrypto?window.msCrypto:i)&&"undefined"!=typeof global&&global.crypto?global.crypto:i)&&"function"==typeof require)try{i=require("crypto")}catch(t){}var r=Object.create||function(t){return e.prototype=t,t=new e,e.prototype=null,t};function e(){}var t={},o=t.lib={},n=o.Base={extend:function(t){var e=r(this);return t&&e.mixIn(t),e.hasOwnProperty("init")&&this.init!==e.init||(e.init=function(){e.$super.init.apply(this,arguments)}),(e.init.prototype=e).$super=this,e},create:function(){var t=this.extend();return t.init.apply(t,arguments),t},init:function(){},mixIn:function(t){for(var e in t)t.hasOwnProperty(e)&&(this[e]=t[e]);t.hasOwnProperty("toString")&&(this.toString=t.toString)},clone:function(){return this.init.prototype.extend(this)}},l=o.WordArray=n.extend({init:function(t,e){t=this.words=t||[],this.sigBytes=null!=e?e:4*t.length},toString:function(t){return(t||c).stringify(this)},concat:function(t){var e=this.words,r=t.words,i=this.sigBytes,o=t.sigBytes;if(this.clamp(),i%4)for(var n=0;n<o;n++){var s=r[n>>>2]>>>24-n%4*8&255;e[i+n>>>2]|=s<<24-(i+n)%4*8}else for(var c=0;c<o;c+=4)e[i+c>>>2]=r[c>>>2];return this.sigBytes+=o,this},clamp:function(){var t=this.words,e=this.sigBytes;t[e>>>2]&=4294967295<<32-e%4*8,t.length=h.ceil(e/4)},clone:function(){var t=n.clone.call(this);return t.words=this.words.slice(0),t},random:function(t){for(var e=[],r=0;r<t;r+=4)e.push(function(){if(i){if("function"==typeof i.getRandomValues)try{return i.getRandomValues(new Uint32Array(1))[0]}catch(t){}if("function"==typeof i.randomBytes)try{return i.randomBytes(4).readInt32LE()}catch(t){}}throw new Error("Native crypto module could not be used to get secure random number.")}());return new l.init(e,t)}}),s=t.enc={},c=s.Hex={stringify:function(t){for(var e=t.words,r=t.sigBytes,i=[],o=0;o<r;o++){var n=e[o>>>2]>>>24-o%4*8&255;i.push((n>>>4).toString(16)),i.push((15&n).toString(16))}return i.join("")},parse:function(t){for(var e=t.length,r=[],i=0;i<e;i+=2)r[i>>>3]|=parseInt(t.substr(i,2),16)<<24-i%8*4;return new l.init(r,e/2)}},a=s.Latin1={stringify:function(t){for(var e=t.words,r=t.sigBytes,i=[],o=0;o<r;o++){var n=e[o>>>2]>>>24-o%4*8&255;i.push(String.fromCharCode(n))}return i.join("")},parse:function(t){for(var e=t.length,r=[],i=0;i<e;i++)r[i>>>2]|=(255&t.charCodeAt(i))<<24-i%4*8;return new l.init(r,e)}},f=s.Utf8={stringify:function(t){try{return decodeURIComponent(escape(a.stringify(t)))}catch(t){throw new Error("Malformed UTF-8 data")}},parse:function(t){return a.parse(unescape(encodeURIComponent(t)))}},d=o.BufferedBlockAlgorithm=n.extend({reset:function(){this._data=new l.init,this._nDataBytes=0},_append:function(t){"string"==typeof t&&(t=f.parse(t)),this._data.concat(t),this._nDataBytes+=t.sigBytes},_process:function(t){var e,r=this._data,i=r.words,o=r.sigBytes,n=this.blockSize,s=o/(4*n),c=(s=t?h.ceil(s):h.max((0|s)-this._minBufferSize,0))*n,t=h.min(4*c,o);if(c){for(var a=0;a<c;a+=n)this._doProcessBlock(i,a);e=i.splice(0,c),r.sigBytes-=t}return new l.init(e,t)},clone:function(){var t=n.clone.call(this);return t._data=this._data.clone(),t},_minBufferSize:0}),u=(o.Hasher=d.extend({cfg:n.extend(),init:function(t){this.cfg=this.cfg.extend(t),this.reset()},reset:function(){d.reset.call(this),this._doReset()},update:function(t){return this._append(t),this._process(),this},finalize:function(t){return t&&this._append(t),this._doFinalize()},blockSize:16,_createHelper:function(r){return function(t,e){return new r.init(e).finalize(t)}},_createHmacHelper:function(r){return function(t,e){return new u.HMAC.init(r,e).finalize(t)}}}),t.algo={});return t}(Math),u=(u=(p=i).lib,W=u.Base,O=u.WordArray,(u=p.x64={}).Word=W.extend({init:function(t,e){this.high=t,this.low=e}}),u.WordArray=W.extend({init:function(t,e){t=this.words=t||[],this.sigBytes=null!=e?e:8*t.length},toX32:function(){for(var t=this.words,e=t.length,r=[],i=0;i<e;i++){var o=t[i];r.push(o.high),r.push(o.low)}return O.create(r,this.sigBytes)},clone:function(){for(var t=W.clone.call(this),e=t.words=this.words.slice(0),r=e.length,i=0;i<r;i++)e[i]=e[i].clone();return t}}),"function"==typeof ArrayBuffer&&(p=i.lib.WordArray,I=p.init,(p.init=function(t){if((t=(t=t instanceof ArrayBuffer?new Uint8Array(t):t)instanceof Int8Array||"undefined"!=typeof Uint8ClampedArray&&t instanceof Uint8ClampedArray||t instanceof Int16Array||t instanceof Uint16Array||t instanceof Int32Array||t instanceof Uint32Array||t instanceof Float32Array||t instanceof Float64Array?new Uint8Array(t.buffer,t.byteOffset,t.byteLength):t)instanceof Uint8Array){for(var e=t.byteLength,r=[],i=0;i<e;i++)r[i>>>2]|=t[i]<<24-i%4*8;I.call(this,r,e)}else I.apply(this,arguments)}).prototype=p),i),p1=u.lib.WordArray;function _1(t){return t<<8&4278255360|t>>>8&16711935}(u=u.enc).Utf16=u.Utf16BE={stringify:function(t){for(var e=t.words,r=t.sigBytes,i=[],o=0;o<r;o+=2){var n=e[o>>>2]>>>16-o%4*8&65535;i.push(String.fromCharCode(n))}return i.join("")},parse:function(t){for(var e=t.length,r=[],i=0;i<e;i++)r[i>>>1]|=t.charCodeAt(i)<<16-i%2*16;return p1.create(r,2*e)}},u.Utf16LE={stringify:function(t){for(var e=t.words,r=t.sigBytes,i=[],o=0;o<r;o+=2){var n=_1(e[o>>>2]>>>16-o%4*8&65535);i.push(String.fromCharCode(n))}return i.join("")},parse:function(t){for(var e=t.length,r=[],i=0;i<e;i++)r[i>>>1]|=_1(t.charCodeAt(i)<<16-i%2*16);return p1.create(r,2*e)}},U=(p=i).lib.WordArray,p.enc.Base64={stringify:function(t){for(var e=t.words,r=t.sigBytes,i=this._map,o=(t.clamp(),[]),n=0;n<r;n+=3)for(var s=(e[n>>>2]>>>24-n%4*8&255)<<16|(e[n+1>>>2]>>>24-(n+1)%4*8&255)<<8|e[n+2>>>2]>>>24-(n+2)%4*8&255,c=0;c<4&&n+.75*c<r;c++)o.push(i.charAt(s>>>6*(3-c)&63));var a=i.charAt(64);if(a)for(;o.length%4;)o.push(a);return o.join("")},parse:function(t){var e=t.length,r=this._map;if(!(i=this._reverseMap))for(var i=this._reverseMap=[],o=0;o<r.length;o++)i[r.charCodeAt(o)]=o;for(var n,s,c=r.charAt(64),a=(!c||-1!==(c=t.indexOf(c))&&(e=c),t),h=e,l=i,f=[],d=0,u=0;u<h;u++)u%4&&(s=l[a.charCodeAt(u-1)]<<u%4*2,n=l[a.charCodeAt(u)]>>>6-u%4*2,s=s|n,f[d>>>2]|=s<<24-d%4*8,d++);return U.create(f,d)},_map:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="},K=(u=i).lib.WordArray,u.enc.Base64url={stringify:function(t,e){for(var r=t.words,i=t.sigBytes,o=(e=void 0===e?!0:e)?this._safe_map:this._map,n=(t.clamp(),[]),s=0;s<i;s+=3)for(var c=(r[s>>>2]>>>24-s%4*8&255)<<16|(r[s+1>>>2]>>>24-(s+1)%4*8&255)<<8|r[s+2>>>2]>>>24-(s+2)%4*8&255,a=0;a<4&&s+.75*a<i;a++)n.push(o.charAt(c>>>6*(3-a)&63));var h=o.charAt(64);if(h)for(;n.length%4;)n.push(h);return n.join("")},parse:function(t,e){var r=t.length,i=(e=void 0===e?!0:e)?this._safe_map:this._map;if(!(o=this._reverseMap))for(var o=this._reverseMap=[],n=0;n<i.length;n++)o[i.charCodeAt(n)]=n;for(var s,c,e=i.charAt(64),a=(!e||-1!==(e=t.indexOf(e))&&(r=e),t),h=r,l=o,f=[],d=0,u=0;u<h;u++)u%4&&(c=l[a.charCodeAt(u-1)]<<u%4*2,s=l[a.charCodeAt(u)]>>>6-u%4*2,c=c|s,f[d>>>2]|=c<<24-d%4*8,d++);return K.create(f,d)},_map:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",_safe_map:"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"};for(var y1=Math,p=i,g1=(u=p.lib).WordArray,v1=u.Hasher,u=p.algo,A=[],B1=0;B1<64;B1++)A[B1]=4294967296*y1.abs(y1.sin(B1+1))|0;function z(t,e,r,i,o,n,s){t=t+(e&r|~e&i)+o+s;return(t<<n|t>>>32-n)+e}function H(t,e,r,i,o,n,s){t=t+(e&i|r&~i)+o+s;return(t<<n|t>>>32-n)+e}function C(t,e,r,i,o,n,s){t=t+(e^r^i)+o+s;return(t<<n|t>>>32-n)+e}function R(t,e,r,i,o,n,s){t=t+(r^(e|~i))+o+s;return(t<<n|t>>>32-n)+e}u=u.MD5=v1.extend({_doReset:function(){this._hash=new g1.init([1732584193,4023233417,2562383102,271733878])},_doProcessBlock:function(t,e){for(var r=0;r<16;r++){var i=e+r,o=t[i];t[i]=16711935&(o<<8|o>>>24)|4278255360&(o<<24|o>>>8)}var n=this._hash.words,s=t[e+0],c=t[e+1],a=t[e+2],h=t[e+3],l=t[e+4],f=t[e+5],d=t[e+6],u=t[e+7],p=t[e+8],_=t[e+9],y=t[e+10],g=t[e+11],v=t[e+12],B=t[e+13],w=t[e+14],k=t[e+15],x=z(n[0],S=n[1],m=n[2],b=n[3],s,7,A[0]),b=z(b,x,S,m,c,12,A[1]),m=z(m,b,x,S,a,17,A[2]),S=z(S,m,b,x,h,22,A[3]);x=z(x,S,m,b,l,7,A[4]),b=z(b,x,S,m,f,12,A[5]),m=z(m,b,x,S,d,17,A[6]),S=z(S,m,b,x,u,22,A[7]),x=z(x,S,m,b,p,7,A[8]),b=z(b,x,S,m,_,12,A[9]),m=z(m,b,x,S,y,17,A[10]),S=z(S,m,b,x,g,22,A[11]),x=z(x,S,m,b,v,7,A[12]),b=z(b,x,S,m,B,12,A[13]),m=z(m,b,x,S,w,17,A[14]),x=H(x,S=z(S,m,b,x,k,22,A[15]),m,b,c,5,A[16]),b=H(b,x,S,m,d,9,A[17]),m=H(m,b,x,S,g,14,A[18]),S=H(S,m,b,x,s,20,A[19]),x=H(x,S,m,b,f,5,A[20]),b=H(b,x,S,m,y,9,A[21]),m=H(m,b,x,S,k,14,A[22]),S=H(S,m,b,x,l,20,A[23]),x=H(x,S,m,b,_,5,A[24]),b=H(b,x,S,m,w,9,A[25]),m=H(m,b,x,S,h,14,A[26]),S=H(S,m,b,x,p,20,A[27]),x=H(x,S,m,b,B,5,A[28]),b=H(b,x,S,m,a,9,A[29]),m=H(m,b,x,S,u,14,A[30]),x=C(x,S=H(S,m,b,x,v,20,A[31]),m,b,f,4,A[32]),b=C(b,x,S,m,p,11,A[33]),m=C(m,b,x,S,g,16,A[34]),S=C(S,m,b,x,w,23,A[35]),x=C(x,S,m,b,c,4,A[36]),b=C(b,x,S,m,l,11,A[37]),m=C(m,b,x,S,u,16,A[38]),S=C(S,m,b,x,y,23,A[39]),x=C(x,S,m,b,B,4,A[40]),b=C(b,x,S,m,s,11,A[41]),m=C(m,b,x,S,h,16,A[42]),S=C(S,m,b,x,d,23,A[43]),x=C(x,S,m,b,_,4,A[44]),b=C(b,x,S,m,v,11,A[45]),m=C(m,b,x,S,k,16,A[46]),x=R(x,S=C(S,m,b,x,a,23,A[47]),m,b,s,6,A[48]),b=R(b,x,S,m,u,10,A[49]),m=R(m,b,x,S,w,15,A[50]),S=R(S,m,b,x,f,21,A[51]),x=R(x,S,m,b,v,6,A[52]),b=R(b,x,S,m,h,10,A[53]),m=R(m,b,x,S,y,15,A[54]),S=R(S,m,b,x,c,21,A[55]),x=R(x,S,m,b,p,6,A[56]),b=R(b,x,S,m,k,10,A[57]),m=R(m,b,x,S,d,15,A[58]),S=R(S,m,b,x,B,21,A[59]),x=R(x,S,m,b,l,6,A[60]),b=R(b,x,S,m,g,10,A[61]),m=R(m,b,x,S,a,15,A[62]),S=R(S,m,b,x,_,21,A[63]),n[0]=n[0]+x|0,n[1]=n[1]+S|0,n[2]=n[2]+m|0,n[3]=n[3]+b|0},_doFinalize:function(){for(var t=this._data,e=t.words,r=8*this._nDataBytes,i=8*t.sigBytes,o=(e[i>>>5]|=128<<24-i%32,y1.floor(r/4294967296)),o=(e[15+(64+i>>>9<<4)]=16711935&(o<<8|o>>>24)|4278255360&(o<<24|o>>>8),e[14+(64+i>>>9<<4)]=16711935&(r<<8|r>>>24)|4278255360&(r<<24|r>>>8),t.sigBytes=4*(e.length+1),this._process(),this._hash),n=o.words,s=0;s<4;s++){var c=n[s];n[s]=16711935&(c<<8|c>>>24)|4278255360&(c<<24|c>>>8)}return o},clone:function(){var t=v1.clone.call(this);return t._hash=this._hash.clone(),t}}),p.MD5=v1._createHelper(u),p.HmacMD5=v1._createHmacHelper(u),u=(p=i).lib,X=u.WordArray,L=u.Hasher,u=p.algo,l=[],u=u.SHA1=L.extend({_doReset:function(){this._hash=new X.init([1732584193,4023233417,2562383102,271733878,3285377520])},_doProcessBlock:function(t,e){for(var r=this._hash.words,i=r[0],o=r[1],n=r[2],s=r[3],c=r[4],a=0;a<80;a++){a<16?l[a]=0|t[e+a]:(h=l[a-3]^l[a-8]^l[a-14]^l[a-16],l[a]=h<<1|h>>>31);var h=(i<<5|i>>>27)+c+l[a];h+=a<20?1518500249+(o&n|~o&s):a<40?1859775393+(o^n^s):a<60?(o&n|o&s|n&s)-1894007588:(o^n^s)-899497514,c=s,s=n,n=o<<30|o>>>2,o=i,i=h}r[0]=r[0]+i|0,r[1]=r[1]+o|0,r[2]=r[2]+n|0,r[3]=r[3]+s|0,r[4]=r[4]+c|0},_doFinalize:function(){var t=this._data,e=t.words,r=8*this._nDataBytes,i=8*t.sigBytes;return e[i>>>5]|=128<<24-i%32,e[14+(64+i>>>9<<4)]=Math.floor(r/4294967296),e[15+(64+i>>>9<<4)]=r,t.sigBytes=4*e.length,this._process(),this._hash},clone:function(){var t=L.clone.call(this);return t._hash=this._hash.clone(),t}}),p.SHA1=L._createHelper(u),p.HmacSHA1=L._createHmacHelper(u);var w1=Math,p=i,k1=(u=p.lib).WordArray,x1=u.Hasher,u=p.algo,b1=[],m1=[];function S1(t){return 4294967296*(t-(0|t))|0}for(var A1=2,z1=0;z1<64;)!function(t){for(var e=w1.sqrt(t),r=2;r<=e;r++)if(!(t%r))return;return 1}(A1)||(z1<8&&(b1[z1]=S1(w1.pow(A1,.5))),m1[z1]=S1(w1.pow(A1,1/3)),z1++),A1++;var _=[],u=u.SHA256=x1.extend({_doReset:function(){this._hash=new k1.init(b1.slice(0))},_doProcessBlock:function(t,e){for(var r=this._hash.words,i=r[0],o=r[1],n=r[2],s=r[3],c=r[4],a=r[5],h=r[6],l=r[7],f=0;f<64;f++){f<16?_[f]=0|t[e+f]:(d=_[f-15],u=_[f-2],_[f]=((d<<25|d>>>7)^(d<<14|d>>>18)^d>>>3)+_[f-7]+((u<<15|u>>>17)^(u<<13|u>>>19)^u>>>10)+_[f-16]);var d=i&o^i&n^o&n,u=l+((c<<26|c>>>6)^(c<<21|c>>>11)^(c<<7|c>>>25))+(c&a^~c&h)+m1[f]+_[f],l=h,h=a,a=c,c=s+u|0,s=n,n=o,o=i,i=u+(((i<<30|i>>>2)^(i<<19|i>>>13)^(i<<10|i>>>22))+d)|0}r[0]=r[0]+i|0,r[1]=r[1]+o|0,r[2]=r[2]+n|0,r[3]=r[3]+s|0,r[4]=r[4]+c|0,r[5]=r[5]+a|0,r[6]=r[6]+h|0,r[7]=r[7]+l|0},_doFinalize:function(){var t=this._data,e=t.words,r=8*this._nDataBytes,i=8*t.sigBytes;return e[i>>>5]|=128<<24-i%32,e[14+(64+i>>>9<<4)]=w1.floor(r/4294967296),e[15+(64+i>>>9<<4)]=r,t.sigBytes=4*e.length,this._process(),this._hash},clone:function(){var t=x1.clone.call(this);return t._hash=this._hash.clone(),t}}),p=(p.SHA256=x1._createHelper(u),p.HmacSHA256=x1._createHmacHelper(u),j=(p=i).lib.WordArray,u=p.algo,T=u.SHA256,u=u.SHA224=T.extend({_doReset:function(){this._hash=new j.init([3238371032,914150663,812702999,4144912697,4290775857,1750603025,1694076839,3204075428])},_doFinalize:function(){var t=T._doFinalize.call(this);return t.sigBytes-=4,t}}),p.SHA224=T._createHelper(u),p.HmacSHA224=T._createHmacHelper(u),i),H1=p.lib.Hasher,y=(u=p.x64).Word,C1=u.WordArray,u=p.algo;function g(){return y.create.apply(y,arguments)}for(var R1=[g(1116352408,3609767458),g(1899447441,602891725),g(3049323471,3964484399),g(3921009573,2173295548),g(961987163,4081628472),g(1508970993,3053834265),g(2453635748,2937671579),g(2870763221,3664609560),g(3624381080,2734883394),g(310598401,1164996542),g(607225278,1323610764),g(1426881987,3590304994),g(1925078388,4068182383),g(2162078206,991336113),g(2614888103,633803317),g(3248222580,3479774868),g(3835390401,2666613458),g(4022224774,944711139),g(264347078,2341262773),g(604807628,2007800933),g(770255983,1495990901),g(1249150122,1856431235),g(1555081692,3175218132),g(1996064986,2198950837),g(2554220882,3999719339),g(2821834349,766784016),g(2952996808,2566594879),g(3210313671,3203337956),g(3336571891,1034457026),g(3584528711,2466948901),g(113926993,3758326383),g(338241895,168717936),g(666307205,1188179964),g(773529912,1546045734),g(1294757372,1522805485),g(1396182291,2643833823),g(1695183700,2343527390),g(1986661051,1014477480),g(2177026350,1206759142),g(2456956037,344077627),g(2730485921,1290863460),g(2820302411,3158454273),g(3259730800,3505952657),g(3345764771,106217008),g(3516065817,3606008344),g(3600352804,1432725776),g(4094571909,1467031594),g(275423344,851169720),g(430227734,3100823752),g(506948616,1363258195),g(659060556,3750685593),g(883997877,3785050280),g(958139571,3318307427),g(1322822218,3812723403),g(1537002063,2003034995),g(1747873779,3602036899),g(1955562222,1575990012),g(2024104815,1125592928),g(2227730452,2716904306),g(2361852424,442776044),g(2428436474,593698344),g(2756734187,3733110249),g(3204031479,2999351573),g(3329325298,3815920427),g(3391569614,3928383900),g(3515267271,566280711),g(3940187606,3454069534),g(4118630271,4000239992),g(116418474,1914138554),g(174292421,2731055270),g(289380356,3203993006),g(460393269,320620315),g(685471733,587496836),g(852142971,1086792851),g(1017036298,365543100),g(1126000580,2618297676),g(1288033470,3409855158),g(1501505948,4234509866),g(1607167915,987167468),g(1816402316,1246189591)],D1=[],E1=0;E1<80;E1++)D1[E1]=g();u=u.SHA512=H1.extend({_doReset:function(){this._hash=new C1.init([new y.init(1779033703,4089235720),new y.init(3144134277,2227873595),new y.init(1013904242,4271175723),new y.init(2773480762,1595750129),new y.init(1359893119,2917565137),new y.init(2600822924,725511199),new y.init(528734635,4215389547),new y.init(1541459225,327033209)])},_doProcessBlock:function(W,O){for(var t=this._hash.words,e=t[0],r=t[1],i=t[2],o=t[3],n=t[4],s=t[5],c=t[6],t=t[7],I=e.high,a=e.low,U=r.high,h=r.low,K=i.high,l=i.low,X=o.high,f=o.low,L=n.high,d=n.low,j=s.high,u=s.low,T=c.high,p=c.low,N=t.high,_=t.low,y=I,g=a,v=U,B=h,w=K,k=l,q=X,x=f,b=L,m=d,Z=j,S=u,V=T,G=p,J=N,Q=_,A=0;A<80;A++)var z,H,C=D1[A],R=(A<16?(H=C.high=0|W[O+2*A],z=C.low=0|W[O+2*A+1]):(F=(P=D1[A-15]).high,P=P.low,M=(E=D1[A-2]).high,E=E.low,D=(R=D1[A-7]).high,R=R.low,$=(Y=D1[A-16]).high,H=(H=((F>>>1|P<<31)^(F>>>8|P<<24)^F>>>7)+D+((z=(D=(P>>>1|F<<31)^(P>>>8|F<<24)^(P>>>7|F<<25))+R)>>>0<D>>>0?1:0))+((M>>>19|E<<13)^(M<<3|E>>>29)^M>>>6)+((z+=P=(E>>>19|M<<13)^(E<<3|M>>>29)^(E>>>6|M<<26))>>>0<P>>>0?1:0),z+=F=Y.low,C.high=H=H+$+(z>>>0<F>>>0?1:0),C.low=z),b&Z^~b&V),D=m&S^~m&G,E=y&v^y&w^v&w,M=(g>>>28|y<<4)^(g<<30|y>>>2)^(g<<25|y>>>7),P=R1[A],Y=P.high,$=P.low,F=Q+((m>>>14|b<<18)^(m>>>18|b<<14)^(m<<23|b>>>9)),C=J+((b>>>14|m<<18)^(b>>>18|m<<14)^(b<<23|m>>>9))+(F>>>0<Q>>>0?1:0),t1=M+(g&B^g&k^B&k),J=V,Q=G,V=Z,G=S,Z=b,S=m,b=q+(C=C+R+((F=F+D)>>>0<D>>>0?1:0)+Y+((F=F+$)>>>0<$>>>0?1:0)+H+((F=F+z)>>>0<z>>>0?1:0))+((m=x+F|0)>>>0<x>>>0?1:0)|0,q=w,x=k,w=v,k=B,v=y,B=g,y=C+(((y>>>28|g<<4)^(y<<30|g>>>2)^(y<<25|g>>>7))+E+(t1>>>0<M>>>0?1:0))+((g=F+t1|0)>>>0<F>>>0?1:0)|0;a=e.low=a+g,e.high=I+y+(a>>>0<g>>>0?1:0),h=r.low=h+B,r.high=U+v+(h>>>0<B>>>0?1:0),l=i.low=l+k,i.high=K+w+(l>>>0<k>>>0?1:0),f=o.low=f+x,o.high=X+q+(f>>>0<x>>>0?1:0),d=n.low=d+m,n.high=L+b+(d>>>0<m>>>0?1:0),u=s.low=u+S,s.high=j+Z+(u>>>0<S>>>0?1:0),p=c.low=p+G,c.high=T+V+(p>>>0<G>>>0?1:0),_=t.low=_+Q,t.high=N+J+(_>>>0<Q>>>0?1:0)},_doFinalize:function(){var t=this._data,e=t.words,r=8*this._nDataBytes,i=8*t.sigBytes;return e[i>>>5]|=128<<24-i%32,e[30+(128+i>>>10<<5)]=Math.floor(r/4294967296),e[31+(128+i>>>10<<5)]=r,t.sigBytes=4*e.length,this._process(),this._hash.toX32()},clone:function(){var t=H1.clone.call(this);return t._hash=this._hash.clone(),t},blockSize:32}),p.SHA512=H1._createHelper(u),p.HmacSHA512=H1._createHmacHelper(u),u=(p=i).x64,t=u.Word,N=u.WordArray,u=p.algo,q=u.SHA512,u=u.SHA384=q.extend({_doReset:function(){this._hash=new N.init([new t.init(3418070365,3238371032),new t.init(1654270250,914150663),new t.init(2438529370,812702999),new t.init(355462360,4144912697),new t.init(1731405415,4290775857),new t.init(2394180231,1750603025),new t.init(3675008525,1694076839),new t.init(1203062813,3204075428)])},_doFinalize:function(){var t=q._doFinalize.call(this);return t.sigBytes-=16,t}}),p.SHA384=q._createHelper(u),p.HmacSHA384=q._createHmacHelper(u);for(var M1=Math,p=i,P1=(u=p.lib).WordArray,F1=u.Hasher,W1=p.x64.Word,u=p.algo,O1=[],I1=[],U1=[],v=1,B=0,K1=0;K1<24;K1++){O1[v+5*B]=(K1+1)*(K1+2)/2%64;var X1=(2*v+3*B)%5;v=B%5,B=X1}for(v=0;v<5;v++)for(B=0;B<5;B++)I1[v+5*B]=B+(2*v+3*B)%5*5;for(var L1=1,j1=0;j1<24;j1++){for(var T1,N1=0,q1=0,Z1=0;Z1<7;Z1++)1&L1&&((T1=(1<<Z1)-1)<32?q1^=1<<T1:N1^=1<<T1-32),128&L1?L1=L1<<1^113:L1<<=1;U1[j1]=W1.create(N1,q1)}for(var D=[],V1=0;V1<25;V1++)D[V1]=W1.create();function G1(t,e,r){return t&e|~t&r}function J1(t,e,r){return t&r|e&~r}function Q1(t,e){return t<<e|t>>>32-e}function Y1(t){return"string"==typeof t?f1:o}function $1(t,e,r){var i,o=this._iv;o?(i=o,this._iv=void 0):i=this._prevBlock;for(var n=0;n<r;n++)t[e+n]^=i[n]}function t2(t,e,r,i){var o,n=this._iv;n?(o=n.slice(0),this._iv=void 0):o=this._prevBlock,i.encryptBlock(o,0);for(var s=0;s<r;s++)t[e+s]^=o[s]}function e2(t){var e,r,i;return 255==(t>>24&255)?(r=t>>8&255,i=255&t,255===(e=t>>16&255)?(e=0,255===r?(r=0,255===i?i=0:++i):++r):++e,t=0,t=(t+=e<<16)+(r<<8)+i):t+=1<<24,t}u=u.SHA3=F1.extend({cfg:F1.cfg.extend({outputLength:512}),_doReset:function(){for(var t=this._state=[],e=0;e<25;e++)t[e]=new W1.init;this.blockSize=(1600-2*this.cfg.outputLength)/32},_doProcessBlock:function(t,e){for(var r=this._state,i=this.blockSize/2,o=0;o<i;o++){var n=t[e+2*o],s=t[e+2*o+1],n=16711935&(n<<8|n>>>24)|4278255360&(n<<24|n>>>8);(x=r[o]).high^=16711935&(s<<8|s>>>24)|4278255360&(s<<24|s>>>8),x.low^=n}for(var c=0;c<24;c++){for(var a=0;a<5;a++){for(var h=0,l=0,f=0;f<5;f++)h^=(x=r[a+5*f]).high,l^=x.low;var d=D[a];d.high=h,d.low=l}for(a=0;a<5;a++)for(var u=D[(a+4)%5],p=D[(a+1)%5],_=p.high,p=p.low,h=u.high^(_<<1|p>>>31),l=u.low^(p<<1|_>>>31),f=0;f<5;f++)(x=r[a+5*f]).high^=h,x.low^=l;for(var y=1;y<25;y++){var g=(x=r[y]).high,v=x.low,B=O1[y],g=(l=B<32?(h=g<<B|v>>>32-B,v<<B|g>>>32-B):(h=v<<B-32|g>>>64-B,g<<B-32|v>>>64-B),D[I1[y]]);g.high=h,g.low=l}var w=D[0],k=r[0];w.high=k.high,w.low=k.low;for(a=0;a<5;a++)for(f=0;f<5;f++){var x=r[y=a+5*f],b=D[y],m=D[(a+1)%5+5*f],S=D[(a+2)%5+5*f];x.high=b.high^~m.high&S.high,x.low=b.low^~m.low&S.low}x=r[0],w=U1[c];x.high^=w.high,x.low^=w.low}},_doFinalize:function(){for(var t=this._data,e=t.words,r=(this._nDataBytes,8*t.sigBytes),i=32*this.blockSize,o=(e[r>>>5]|=1<<24-r%32,e[(M1.ceil((1+r)/i)*i>>>5)-1]|=128,t.sigBytes=4*e.length,this._process(),this._state),r=this.cfg.outputLength/8,n=r/8,s=[],c=0;c<n;c++){var a=o[c],h=a.high,a=a.low,h=16711935&(h<<8|h>>>24)|4278255360&(h<<24|h>>>8);s.push(16711935&(a<<8|a>>>24)|4278255360&(a<<24|a>>>8)),s.push(h)}return new P1.init(s,r)},clone:function(){for(var t=F1.clone.call(this),e=t._state=this._state.slice(0),r=0;r<25;r++)e[r]=e[r].clone();return t}}),p.SHA3=F1._createHelper(u),p.HmacSHA3=F1._createHmacHelper(u),Math,u=(p=i).lib,e=u.WordArray,Z=u.Hasher,u=p.algo,V=e.create([0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,7,4,13,1,10,6,15,3,12,0,9,5,2,14,11,8,3,10,14,4,9,15,8,1,2,7,0,6,13,11,5,12,1,9,11,10,0,8,12,4,13,3,7,15,14,5,6,2,4,0,5,9,7,12,2,10,14,1,3,8,11,6,15,13]),G=e.create([5,14,7,0,9,2,11,4,13,6,15,8,1,10,3,12,6,11,3,7,0,13,5,10,14,15,8,12,4,9,1,2,15,5,1,3,7,14,6,9,11,8,12,2,10,0,4,13,8,6,4,1,3,11,15,0,5,12,2,13,9,7,10,14,12,15,10,4,1,5,8,7,6,2,13,14,0,3,9,11]),J=e.create([11,14,15,12,5,8,7,9,11,13,14,15,6,7,9,8,7,6,8,13,11,9,7,15,7,12,15,9,11,7,13,12,11,13,6,7,14,9,13,15,14,8,13,6,5,12,7,5,11,12,14,15,14,15,9,8,9,14,5,6,8,6,5,12,9,15,5,11,6,8,13,12,5,12,13,14,11,8,5,6]),Q=e.create([8,9,9,11,13,15,15,5,7,7,8,11,14,14,12,6,9,13,15,7,12,8,9,11,7,7,12,7,6,15,13,11,9,7,15,11,8,6,6,14,12,13,5,14,13,13,7,5,15,5,8,11,14,14,6,14,6,9,12,9,12,5,15,8,8,5,12,9,12,5,14,6,8,13,6,5,15,13,11,11]),Y=e.create([0,1518500249,1859775393,2400959708,2840853838]),$=e.create([1352829926,1548603684,1836072691,2053994217,0]),u=u.RIPEMD160=Z.extend({_doReset:function(){this._hash=e.create([1732584193,4023233417,2562383102,271733878,3285377520])},_doProcessBlock:function(t,e){for(var r=0;r<16;r++){var i=e+r,o=t[i];t[i]=16711935&(o<<8|o>>>24)|4278255360&(o<<24|o>>>8)}for(var n,s,c,a,h,l,f=this._hash.words,d=Y.words,u=$.words,p=V.words,_=G.words,y=J.words,g=Q.words,v=n=f[0],B=s=f[1],w=c=f[2],k=a=f[3],x=h=f[4],r=0;r<80;r+=1)l=(l=Q1(l=(l=n+t[e+p[r]]|0)+(r<16?(s^c^a)+d[0]:r<32?G1(s,c,a)+d[1]:r<48?((s|~c)^a)+d[2]:r<64?J1(s,c,a)+d[3]:(s^(c|~a))+d[4])|0,y[r]))+h|0,n=h,h=a,a=Q1(c,10),c=s,s=l,l=(l=Q1(l=(l=v+t[e+_[r]]|0)+(r<16?(B^(w|~k))+u[0]:r<32?J1(B,w,k)+u[1]:r<48?((B|~w)^k)+u[2]:r<64?G1(B,w,k)+u[3]:(B^w^k)+u[4])|0,g[r]))+x|0,v=x,x=k,k=Q1(w,10),w=B,B=l;l=f[1]+c+k|0,f[1]=f[2]+a+x|0,f[2]=f[3]+h+v|0,f[3]=f[4]+n+B|0,f[4]=f[0]+s+w|0,f[0]=l},_doFinalize:function(){for(var t=this._data,e=t.words,r=8*this._nDataBytes,i=8*t.sigBytes,i=(e[i>>>5]|=128<<24-i%32,e[14+(64+i>>>9<<4)]=16711935&(r<<8|r>>>24)|4278255360&(r<<24|r>>>8),t.sigBytes=4*(e.length+1),this._process(),this._hash),o=i.words,n=0;n<5;n++){var s=o[n];o[n]=16711935&(s<<8|s>>>24)|4278255360&(s<<24|s>>>8)}return i},clone:function(){var t=Z.clone.call(this);return t._hash=this._hash.clone(),t}}),p.RIPEMD160=Z._createHelper(u),p.HmacRIPEMD160=Z._createHmacHelper(u),u=(p=i).lib.Base,t1=p.enc.Utf8,p.algo.HMAC=u.extend({init:function(t,e){t=this._hasher=new t.init,"string"==typeof e&&(e=t1.parse(e));for(var r=t.blockSize,i=4*r,t=((e=e.sigBytes>i?t.finalize(e):e).clamp(),this._oKey=e.clone()),e=this._iKey=e.clone(),o=t.words,n=e.words,s=0;s<r;s++)o[s]^=1549556828,n[s]^=909522486;t.sigBytes=e.sigBytes=i,this.reset()},reset:function(){var t=this._hasher;t.reset(),t.update(this._iKey)},update:function(t){return this._hasher.update(t),this},finalize:function(t){var e=this._hasher,t=e.finalize(t);return e.reset(),e.finalize(this._oKey.clone().concat(t))}}),u=(p=i).lib,w=u.Base,e1=u.WordArray,u=p.algo,P=u.SHA256,r1=u.HMAC,i1=u.PBKDF2=w.extend({cfg:w.extend({keySize:4,hasher:P,iterations:25e4}),init:function(t){this.cfg=this.cfg.extend(t)},compute:function(t,e){for(var r=this.cfg,i=r1.create(r.hasher,t),o=e1.create(),n=e1.create([1]),s=o.words,c=n.words,a=r.keySize,h=r.iterations;s.length<a;){for(var l=i.update(e).finalize(n),f=(i.reset(),l.words),d=f.length,u=l,p=1;p<h;p++){u=i.finalize(u),i.reset();for(var _=u.words,y=0;y<d;y++)f[y]^=_[y]}o.concat(l),c[0]++}return o.sigBytes=4*a,o}}),p.PBKDF2=function(t,e,r){return i1.create(r).compute(t,e)},w=(u=i).lib,P=w.Base,o1=w.WordArray,w=u.algo,p=w.MD5,n1=w.EvpKDF=P.extend({cfg:P.extend({keySize:4,hasher:p,iterations:1}),init:function(t){this.cfg=this.cfg.extend(t)},compute:function(t,e){for(var r,i=this.cfg,o=i.hasher.create(),n=o1.create(),s=n.words,c=i.keySize,a=i.iterations;s.length<c;){r&&o.update(r),r=o.update(t).finalize(e),o.reset();for(var h=1;h<a;h++)r=o.finalize(r),o.reset();n.concat(r)}return n.sigBytes=4*c,n}}),u.EvpKDF=function(t,e,r){return n1.create(r).compute(t,e)},i.lib.Cipher||(P=(w=i).lib,p=P.Base,s=P.WordArray,s1=P.BufferedBlockAlgorithm,(u=w.enc).Utf8,c1=u.Base64,a1=w.algo.EvpKDF,h1=P.Cipher=s1.extend({cfg:p.extend(),createEncryptor:function(t,e){return this.create(this._ENC_XFORM_MODE,t,e)},createDecryptor:function(t,e){return this.create(this._DEC_XFORM_MODE,t,e)},init:function(t,e,r){this.cfg=this.cfg.extend(r),this._xformMode=t,this._key=e,this.reset()},reset:function(){s1.reset.call(this),this._doReset()},process:function(t){return this._append(t),this._process()},finalize:function(t){return t&&this._append(t),this._doFinalize()},keySize:4,ivSize:4,_ENC_XFORM_MODE:1,_DEC_XFORM_MODE:2,_createHelper:function(i){return{encrypt:function(t,e,r){return Y1(e).encrypt(i,t,e,r)},decrypt:function(t,e,r){return Y1(e).decrypt(i,t,e,r)}}}}),P.StreamCipher=h1.extend({_doFinalize:function(){return this._process(!0)},blockSize:1}),u=w.mode={},r=P.BlockCipherMode=p.extend({createEncryptor:function(t,e){return this.Encryptor.create(t,e)},createDecryptor:function(t,e){return this.Decryptor.create(t,e)},init:function(t,e){this._cipher=t,this._iv=e}}),r=u.CBC=((u=r.extend()).Encryptor=u.extend({processBlock:function(t,e){var r=this._cipher,i=r.blockSize;$1.call(this,t,e,i),r.encryptBlock(t,e),this._prevBlock=t.slice(e,e+i)}}),u.Decryptor=u.extend({processBlock:function(t,e){var r=this._cipher,i=r.blockSize,o=t.slice(e,e+i);r.decryptBlock(t,e),$1.call(this,t,e,i),this._prevBlock=o}}),u),u=(w.pad={}).Pkcs7={pad:function(t,e){for(var e=4*e,r=e-t.sigBytes%e,i=r<<24|r<<16|r<<8|r,o=[],n=0;n<r;n+=4)o.push(i);e=s.create(o,r);t.concat(e)},unpad:function(t){var e=255&t.words[t.sigBytes-1>>>2];t.sigBytes-=e}},P.BlockCipher=h1.extend({cfg:h1.cfg.extend({mode:r,padding:u}),reset:function(){h1.reset.call(this);var t,e=this.cfg,r=e.iv,e=e.mode;this._xformMode==this._ENC_XFORM_MODE?t=e.createEncryptor:(t=e.createDecryptor,this._minBufferSize=1),this._mode&&this._mode.__creator==t?this._mode.init(this,r&&r.words):(this._mode=t.call(e,this,r&&r.words),this._mode.__creator=t)},_doProcessBlock:function(t,e){this._mode.processBlock(t,e)},_doFinalize:function(){var t,e=this.cfg.padding;return this._xformMode==this._ENC_XFORM_MODE?(e.pad(this._data,this.blockSize),t=this._process(!0)):(t=this._process(!0),e.unpad(t)),t},blockSize:4}),l1=P.CipherParams=p.extend({init:function(t){this.mixIn(t)},toString:function(t){return(t||this.formatter).stringify(this)}}),r=(w.format={}).OpenSSL={stringify:function(t){var e=t.ciphertext,t=t.salt,t=t?s.create([1398893684,1701076831]).concat(t).concat(e):e;return t.toString(c1)},parse:function(t){var e,t=c1.parse(t),r=t.words;return 1398893684==r[0]&&1701076831==r[1]&&(e=s.create(r.slice(2,4)),r.splice(0,4),t.sigBytes-=16),l1.create({ciphertext:t,salt:e})}},o=P.SerializableCipher=p.extend({cfg:p.extend({format:r}),encrypt:function(t,e,r,i){i=this.cfg.extend(i);var o=t.createEncryptor(r,i),e=o.finalize(e),o=o.cfg;return l1.create({ciphertext:e,key:r,iv:o.iv,algorithm:t,mode:o.mode,padding:o.padding,blockSize:t.blockSize,formatter:i.format})},decrypt:function(t,e,r,i){return i=this.cfg.extend(i),e=this._parse(e,i.format),t.createDecryptor(r,i).finalize(e.ciphertext)},_parse:function(t,e){return"string"==typeof t?e.parse(t,this):t}}),u=(w.kdf={}).OpenSSL={execute:function(t,e,r,i,o){i=i||s.random(8),o=(o?a1.create({keySize:e+r,hasher:o}):a1.create({keySize:e+r})).compute(t,i);t=s.create(o.words.slice(e),4*r);return o.sigBytes=4*e,l1.create({key:o,iv:t,salt:i})}},f1=P.PasswordBasedCipher=o.extend({cfg:o.cfg.extend({kdf:u}),encrypt:function(t,e,r,i){r=(i=this.cfg.extend(i)).kdf.execute(r,t.keySize,t.ivSize,i.salt,i.hasher),i.iv=r.iv,t=o.encrypt.call(this,t,e,r.key,i);return t.mixIn(r),t},decrypt:function(t,e,r,i){i=this.cfg.extend(i),e=this._parse(e,i.format);r=i.kdf.execute(r,t.keySize,t.ivSize,e.salt,i.hasher);return i.iv=r.iv,o.decrypt.call(this,t,e,r.key,i)}})),i.mode.CFB=((p=i.lib.BlockCipherMode.extend()).Encryptor=p.extend({processBlock:function(t,e){var r=this._cipher,i=r.blockSize;t2.call(this,t,e,i,r),this._prevBlock=t.slice(e,e+i)}}),p.Decryptor=p.extend({processBlock:function(t,e){var r=this._cipher,i=r.blockSize,o=t.slice(e,e+i);t2.call(this,t,e,i,r),this._prevBlock=o}}),p),i.mode.CTR=(r=i.lib.BlockCipherMode.extend(),w=r.Encryptor=r.extend({processBlock:function(t,e){var r=this._cipher,i=r.blockSize,o=this._iv,n=this._counter,s=(o&&(n=this._counter=o.slice(0),this._iv=void 0),n.slice(0));r.encryptBlock(s,0),n[i-1]=n[i-1]+1|0;for(var c=0;c<i;c++)t[e+c]^=s[c]}}),r.Decryptor=w,r),i.mode.CTRGladman=(P=i.lib.BlockCipherMode.extend(),u=P.Encryptor=P.extend({processBlock:function(t,e){var r=this._cipher,i=r.blockSize,o=this._iv,n=this._counter,s=(o&&(n=this._counter=o.slice(0),this._iv=void 0),0===((o=n)[0]=e2(o[0]))&&(o[1]=e2(o[1])),n.slice(0));r.encryptBlock(s,0);for(var c=0;c<i;c++)t[e+c]^=s[c]}}),P.Decryptor=u,P),i.mode.OFB=(p=i.lib.BlockCipherMode.extend(),w=p.Encryptor=p.extend({processBlock:function(t,e){var r=this._cipher,i=r.blockSize,o=this._iv,n=this._keystream;o&&(n=this._keystream=o.slice(0),this._iv=void 0),r.encryptBlock(n,0);for(var s=0;s<i;s++)t[e+s]^=n[s]}}),p.Decryptor=w,p),i.mode.ECB=((u=i.lib.BlockCipherMode.extend()).Encryptor=u.extend({processBlock:function(t,e){this._cipher.encryptBlock(t,e)}}),u.Decryptor=u.extend({processBlock:function(t,e){this._cipher.decryptBlock(t,e)}}),u),i.pad.AnsiX923={pad:function(t,e){var r=t.sigBytes,e=4*e,e=e-r%e,r=r+e-1;t.clamp(),t.words[r>>>2]|=e<<24-r%4*8,t.sigBytes+=e},unpad:function(t){var e=255&t.words[t.sigBytes-1>>>2];t.sigBytes-=e}},i.pad.Iso10126={pad:function(t,e){e*=4,e-=t.sigBytes%e;t.concat(i.lib.WordArray.random(e-1)).concat(i.lib.WordArray.create([e<<24],1))},unpad:function(t){var e=255&t.words[t.sigBytes-1>>>2];t.sigBytes-=e}},i.pad.Iso97971={pad:function(t,e){t.concat(i.lib.WordArray.create([2147483648],1)),i.pad.ZeroPadding.pad(t,e)},unpad:function(t){i.pad.ZeroPadding.unpad(t),t.sigBytes--}},i.pad.ZeroPadding={pad:function(t,e){e*=4;t.clamp(),t.sigBytes+=e-(t.sigBytes%e||e)},unpad:function(t){for(var e=t.words,r=t.sigBytes-1,r=t.sigBytes-1;0<=r;r--)if(e[r>>>2]>>>24-r%4*8&255){t.sigBytes=r+1;break}}},i.pad.NoPadding={pad:function(){},unpad:function(){}},d1=(P=i).lib.CipherParams,u1=P.enc.Hex,P.format.Hex={stringify:function(t){return t.ciphertext.toString(u1)},parse:function(t){t=u1.parse(t);return d1.create({ciphertext:t})}};for(var w=i,p=w.lib.BlockCipher,u=w.algo,k=[],r2=[],i2=[],o2=[],n2=[],s2=[],c2=[],a2=[],h2=[],l2=[],x=[],b=0;b<256;b++)x[b]=b<128?b<<1:b<<1^283;for(var m=0,S=0,b=0;b<256;b++){var E=S^S<<1^S<<2^S<<3^S<<4,f2=(k[m]=E=E>>>8^255&E^99,x[r2[E]=m]),d2=x[f2],u2=x[d2],M=257*x[E]^16843008*E;i2[m]=M<<24|M>>>8,o2[m]=M<<16|M>>>16,n2[m]=M<<8|M>>>24,s2[m]=M,c2[E]=(M=16843009*u2^65537*d2^257*f2^16843008*m)<<24|M>>>8,a2[E]=M<<16|M>>>16,h2[E]=M<<8|M>>>24,l2[E]=M,m?(m=f2^x[x[x[u2^f2]]],S^=x[x[S]]):m=S=1}var p2=[0,1,2,4,8,16,32,64,128,27,54],u=u.AES=p.extend({_doReset:function(){if(!this._nRounds||this._keyPriorReset!==this._key){for(var t=this._keyPriorReset=this._key,e=t.words,r=t.sigBytes/4,i=4*(1+(this._nRounds=6+r)),o=this._keySchedule=[],n=0;n<i;n++)n<r?o[n]=e[n]:(a=o[n-1],n%r?6<r&&n%r==4&&(a=k[a>>>24]<<24|k[a>>>16&255]<<16|k[a>>>8&255]<<8|k[255&a]):(a=k[(a=a<<8|a>>>24)>>>24]<<24|k[a>>>16&255]<<16|k[a>>>8&255]<<8|k[255&a],a^=p2[n/r|0]<<24),o[n]=o[n-r]^a);for(var s=this._invKeySchedule=[],c=0;c<i;c++){var a,n=i-c;a=c%4?o[n]:o[n-4],s[c]=c<4||n<=4?a:c2[k[a>>>24]]^a2[k[a>>>16&255]]^h2[k[a>>>8&255]]^l2[k[255&a]]}}},encryptBlock:function(t,e){this._doCryptBlock(t,e,this._keySchedule,i2,o2,n2,s2,k)},decryptBlock:function(t,e){var r=t[e+1],r=(t[e+1]=t[e+3],t[e+3]=r,this._doCryptBlock(t,e,this._invKeySchedule,c2,a2,h2,l2,r2),t[e+1]);t[e+1]=t[e+3],t[e+3]=r},_doCryptBlock:function(t,e,r,i,o,n,s,c){for(var a=this._nRounds,h=t[e]^r[0],l=t[e+1]^r[1],f=t[e+2]^r[2],d=t[e+3]^r[3],u=4,p=1;p<a;p++)var _=i[h>>>24]^o[l>>>16&255]^n[f>>>8&255]^s[255&d]^r[u++],y=i[l>>>24]^o[f>>>16&255]^n[d>>>8&255]^s[255&h]^r[u++],g=i[f>>>24]^o[d>>>16&255]^n[h>>>8&255]^s[255&l]^r[u++],v=i[d>>>24]^o[h>>>16&255]^n[l>>>8&255]^s[255&f]^r[u++],h=_,l=y,f=g,d=v;_=(c[h>>>24]<<24|c[l>>>16&255]<<16|c[f>>>8&255]<<8|c[255&d])^r[u++],y=(c[l>>>24]<<24|c[f>>>16&255]<<16|c[d>>>8&255]<<8|c[255&h])^r[u++],g=(c[f>>>24]<<24|c[d>>>16&255]<<16|c[h>>>8&255]<<8|c[255&l])^r[u++],v=(c[d>>>24]<<24|c[h>>>16&255]<<16|c[l>>>8&255]<<8|c[255&f])^r[u++];t[e]=_,t[e+1]=y,t[e+2]=g,t[e+3]=v},keySize:8}),P=(w.AES=p._createHelper(u),i),_2=(w=P.lib).WordArray,w=w.BlockCipher,p=P.algo,y2=[57,49,41,33,25,17,9,1,58,50,42,34,26,18,10,2,59,51,43,35,27,19,11,3,60,52,44,36,63,55,47,39,31,23,15,7,62,54,46,38,30,22,14,6,61,53,45,37,29,21,13,5,28,20,12,4],g2=[14,17,11,24,1,5,3,28,15,6,21,10,23,19,12,4,26,8,16,7,27,20,13,2,41,52,31,37,47,55,30,40,51,45,33,48,44,49,39,56,34,53,46,42,50,36,29,32],v2=[1,2,4,6,8,10,12,14,15,17,19,21,23,25,27,28],B2=[{0:8421888,268435456:32768,536870912:8421378,805306368:2,1073741824:512,1342177280:8421890,1610612736:8389122,1879048192:8388608,2147483648:514,2415919104:8389120,2684354560:33280,2952790016:8421376,3221225472:32770,3489660928:8388610,3758096384:0,4026531840:33282,134217728:0,402653184:8421890,671088640:33282,939524096:32768,1207959552:8421888,1476395008:512,1744830464:8421378,2013265920:2,2281701376:8389120,2550136832:33280,2818572288:8421376,3087007744:8389122,3355443200:8388610,3623878656:32770,3892314112:514,4160749568:8388608,1:32768,268435457:2,536870913:8421888,805306369:8388608,1073741825:8421378,1342177281:33280,1610612737:512,1879048193:8389122,2147483649:8421890,2415919105:8421376,2684354561:8388610,2952790017:33282,3221225473:514,3489660929:8389120,3758096385:32770,4026531841:0,134217729:8421890,402653185:8421376,671088641:8388608,939524097:512,1207959553:32768,1476395009:8388610,1744830465:2,2013265921:33282,2281701377:32770,2550136833:8389122,2818572289:514,3087007745:8421888,3355443201:8389120,3623878657:0,3892314113:33280,4160749569:8421378},{0:1074282512,16777216:16384,33554432:524288,50331648:1074266128,67108864:1073741840,83886080:1074282496,100663296:1073758208,117440512:16,134217728:540672,150994944:1073758224,167772160:1073741824,184549376:540688,201326592:524304,218103808:0,234881024:16400,251658240:1074266112,8388608:1073758208,25165824:540688,41943040:16,58720256:1073758224,75497472:1074282512,92274688:1073741824,109051904:524288,125829120:1074266128,142606336:524304,159383552:0,176160768:16384,192937984:1074266112,209715200:1073741840,226492416:540672,243269632:1074282496,260046848:16400,268435456:0,285212672:1074266128,301989888:1073758224,318767104:1074282496,335544320:1074266112,352321536:16,369098752:540688,385875968:16384,402653184:16400,419430400:524288,436207616:524304,452984832:1073741840,469762048:540672,486539264:1073758208,503316480:1073741824,520093696:1074282512,276824064:540688,293601280:524288,310378496:1074266112,327155712:16384,343932928:1073758208,360710144:1074282512,377487360:16,394264576:1073741824,411041792:1074282496,427819008:1073741840,444596224:1073758224,461373440:524304,478150656:0,494927872:16400,511705088:1074266128,528482304:540672},{0:260,1048576:0,2097152:67109120,3145728:65796,4194304:65540,5242880:67108868,6291456:67174660,7340032:67174400,8388608:67108864,9437184:67174656,10485760:65792,11534336:67174404,12582912:67109124,13631488:65536,14680064:4,15728640:256,524288:67174656,1572864:67174404,2621440:0,3670016:67109120,4718592:67108868,5767168:65536,6815744:65540,7864320:260,8912896:4,9961472:256,11010048:67174400,12058624:65796,13107200:65792,14155776:67109124,15204352:67174660,16252928:67108864,16777216:67174656,17825792:65540,18874368:65536,19922944:67109120,20971520:256,22020096:67174660,23068672:67108868,24117248:0,25165824:67109124,26214400:67108864,27262976:4,28311552:65792,29360128:67174400,30408704:260,31457280:65796,32505856:67174404,17301504:67108864,18350080:260,19398656:67174656,20447232:0,21495808:65540,22544384:67109120,23592960:256,24641536:67174404,25690112:65536,26738688:67174660,27787264:65796,28835840:67108868,29884416:67109124,30932992:67174400,31981568:4,33030144:65792},{0:2151682048,65536:2147487808,131072:4198464,196608:2151677952,262144:0,327680:4198400,393216:2147483712,458752:4194368,524288:2147483648,589824:4194304,655360:64,720896:2147487744,786432:2151678016,851968:4160,917504:4096,983040:2151682112,32768:2147487808,98304:64,163840:2151678016,229376:2147487744,294912:4198400,360448:2151682112,425984:0,491520:2151677952,557056:4096,622592:2151682048,688128:4194304,753664:4160,819200:2147483648,884736:4194368,950272:4198464,1015808:2147483712,1048576:4194368,1114112:4198400,1179648:2147483712,1245184:0,1310720:4160,1376256:2151678016,1441792:2151682048,1507328:2147487808,1572864:2151682112,1638400:2147483648,1703936:2151677952,1769472:4198464,1835008:2147487744,1900544:4194304,1966080:64,2031616:4096,1081344:2151677952,1146880:2151682112,1212416:0,1277952:4198400,1343488:4194368,1409024:2147483648,1474560:2147487808,1540096:64,1605632:2147483712,1671168:4096,1736704:2147487744,1802240:2151678016,1867776:4160,1933312:2151682048,1998848:4194304,2064384:4198464},{0:128,4096:17039360,8192:262144,12288:536870912,16384:537133184,20480:16777344,24576:553648256,28672:262272,32768:16777216,36864:537133056,40960:536871040,45056:553910400,49152:553910272,53248:0,57344:17039488,61440:553648128,2048:17039488,6144:553648256,10240:128,14336:17039360,18432:262144,22528:537133184,26624:553910272,30720:536870912,34816:537133056,38912:0,43008:553910400,47104:16777344,51200:536871040,55296:553648128,59392:16777216,63488:262272,65536:262144,69632:128,73728:536870912,77824:553648256,81920:16777344,86016:553910272,90112:537133184,94208:16777216,98304:553910400,102400:553648128,106496:17039360,110592:537133056,114688:262272,118784:536871040,122880:0,126976:17039488,67584:553648256,71680:16777216,75776:17039360,79872:537133184,83968:536870912,88064:17039488,92160:128,96256:553910272,100352:262272,104448:553910400,108544:0,112640:553648128,116736:16777344,120832:262144,124928:537133056,129024:536871040},{0:268435464,256:8192,512:270532608,768:270540808,1024:268443648,1280:2097152,1536:2097160,1792:268435456,2048:0,2304:268443656,2560:2105344,2816:8,3072:270532616,3328:2105352,3584:8200,3840:270540800,128:270532608,384:270540808,640:8,896:2097152,1152:2105352,1408:268435464,1664:268443648,1920:8200,2176:2097160,2432:8192,2688:268443656,2944:270532616,3200:0,3456:270540800,3712:2105344,3968:268435456,4096:268443648,4352:270532616,4608:270540808,4864:8200,5120:2097152,5376:268435456,5632:268435464,5888:2105344,6144:2105352,6400:0,6656:8,6912:270532608,7168:8192,7424:268443656,7680:270540800,7936:2097160,4224:8,4480:2105344,4736:2097152,4992:268435464,5248:268443648,5504:8200,5760:270540808,6016:270532608,6272:270540800,6528:270532616,6784:8192,7040:2105352,7296:2097160,7552:0,7808:268435456,8064:268443656},{0:1048576,16:33555457,32:1024,48:1049601,64:34604033,80:0,96:1,112:34603009,128:33555456,144:1048577,160:33554433,176:34604032,192:34603008,208:1025,224:1049600,240:33554432,8:34603009,24:0,40:33555457,56:34604032,72:1048576,88:33554433,104:33554432,120:1025,136:1049601,152:33555456,168:34603008,184:1048577,200:1024,216:34604033,232:1,248:1049600,256:33554432,272:1048576,288:33555457,304:34603009,320:1048577,336:33555456,352:34604032,368:1049601,384:1025,400:34604033,416:1049600,432:1,448:0,464:34603008,480:33554433,496:1024,264:1049600,280:33555457,296:34603009,312:1,328:33554432,344:1048576,360:1025,376:34604032,392:33554433,408:34603008,424:0,440:34604033,456:1049601,472:1024,488:33555456,504:1048577},{0:134219808,1:131072,2:134217728,3:32,4:131104,5:134350880,6:134350848,7:2048,8:134348800,9:134219776,10:133120,11:134348832,12:2080,13:0,14:134217760,15:133152,2147483648:2048,2147483649:134350880,2147483650:134219808,2147483651:134217728,2147483652:134348800,2147483653:133120,2147483654:133152,2147483655:32,2147483656:134217760,2147483657:2080,2147483658:131104,2147483659:134350848,2147483660:0,2147483661:134348832,2147483662:134219776,2147483663:131072,16:133152,17:134350848,18:32,19:2048,20:134219776,21:134217760,22:134348832,23:131072,24:0,25:131104,26:134348800,27:134219808,28:134350880,29:133120,30:2080,31:134217728,2147483664:131072,2147483665:2048,2147483666:134348832,2147483667:133152,2147483668:32,2147483669:134348800,2147483670:134217728,2147483671:134219808,2147483672:134350880,2147483673:134217760,2147483674:134219776,2147483675:0,2147483676:133120,2147483677:2080,2147483678:131104,2147483679:134350848}],w2=[4160749569,528482304,33030144,2064384,129024,8064,504,2147483679],k2=p.DES=w.extend({_doReset:function(){for(var t=this._key.words,e=[],r=0;r<56;r++){var i=y2[r]-1;e[r]=t[i>>>5]>>>31-i%32&1}for(var o=this._subKeys=[],n=0;n<16;n++){for(var s=o[n]=[],c=v2[n],r=0;r<24;r++)s[r/6|0]|=e[(g2[r]-1+c)%28]<<31-r%6,s[4+(r/6|0)]|=e[28+(g2[r+24]-1+c)%28]<<31-r%6;s[0]=s[0]<<1|s[0]>>>31;for(r=1;r<7;r++)s[r]=s[r]>>>4*(r-1)+3;s[7]=s[7]<<5|s[7]>>>27}for(var a=this._invSubKeys=[],r=0;r<16;r++)a[r]=o[15-r]},encryptBlock:function(t,e){this._doCryptBlock(t,e,this._subKeys)},decryptBlock:function(t,e){this._doCryptBlock(t,e,this._invSubKeys)},_doCryptBlock:function(t,e,r){this._lBlock=t[e],this._rBlock=t[e+1],x2.call(this,4,252645135),x2.call(this,16,65535),b2.call(this,2,858993459),b2.call(this,8,16711935),x2.call(this,1,1431655765);for(var i=0;i<16;i++){for(var o=r[i],n=this._lBlock,s=this._rBlock,c=0,a=0;a<8;a++)c|=B2[a][((s^o[a])&w2[a])>>>0];this._lBlock=s,this._rBlock=n^c}var h=this._lBlock;this._lBlock=this._rBlock,this._rBlock=h,x2.call(this,1,1431655765),b2.call(this,8,16711935),b2.call(this,2,858993459),x2.call(this,16,65535),x2.call(this,4,252645135),t[e]=this._lBlock,t[e+1]=this._rBlock},keySize:2,ivSize:2,blockSize:2});function x2(t,e){e=(this._lBlock>>>t^this._rBlock)&e;this._rBlock^=e,this._lBlock^=e<<t}function b2(t,e){e=(this._rBlock>>>t^this._lBlock)&e;this._lBlock^=e,this._rBlock^=e<<t}P.DES=w._createHelper(k2),p=p.TripleDES=w.extend({_doReset:function(){var t=this._key.words;if(2!==t.length&&4!==t.length&&t.length<6)throw new Error("Invalid key length - 3DES requires the key length to be 64, 128, 192 or >192.");var e=t.slice(0,2),r=t.length<4?t.slice(0,2):t.slice(2,4),t=t.length<6?t.slice(0,2):t.slice(4,6);this._des1=k2.createEncryptor(_2.create(e)),this._des2=k2.createEncryptor(_2.create(r)),this._des3=k2.createEncryptor(_2.create(t))},encryptBlock:function(t,e){this._des1.encryptBlock(t,e),this._des2.decryptBlock(t,e),this._des3.encryptBlock(t,e)},decryptBlock:function(t,e){this._des3.decryptBlock(t,e),this._des2.encryptBlock(t,e),this._des1.decryptBlock(t,e)},keySize:6,ivSize:2,blockSize:2}),P.TripleDES=w._createHelper(p);var u=i,P=u.lib.StreamCipher,w=u.algo,m2=w.RC4=P.extend({_doReset:function(){for(var t=this._key,e=t.words,r=t.sigBytes,i=this._S=[],o=0;o<256;o++)i[o]=o;for(var o=0,n=0;o<256;o++){var s=o%r,s=e[s>>>2]>>>24-s%4*8&255,n=(n+i[o]+s)%256,s=i[o];i[o]=i[n],i[n]=s}this._i=this._j=0},_doProcessBlock:function(t,e){t[e]^=S2.call(this)},keySize:8,ivSize:0});function S2(){for(var t=this._S,e=this._i,r=this._j,i=0,o=0;o<4;o++){var r=(r+t[e=(e+1)%256])%256,n=t[e];t[e]=t[r],t[r]=n,i|=t[(t[e]+t[r])%256]<<24-8*o}return this._i=e,this._j=r,i}function A2(){for(var t=this._X,e=this._C,r=0;r<8;r++)c[r]=e[r];e[0]=e[0]+1295307597+this._b|0,e[1]=e[1]+3545052371+(e[0]>>>0<c[0]>>>0?1:0)|0,e[2]=e[2]+886263092+(e[1]>>>0<c[1]>>>0?1:0)|0,e[3]=e[3]+1295307597+(e[2]>>>0<c[2]>>>0?1:0)|0,e[4]=e[4]+3545052371+(e[3]>>>0<c[3]>>>0?1:0)|0,e[5]=e[5]+886263092+(e[4]>>>0<c[4]>>>0?1:0)|0,e[6]=e[6]+1295307597+(e[5]>>>0<c[5]>>>0?1:0)|0,e[7]=e[7]+3545052371+(e[6]>>>0<c[6]>>>0?1:0)|0,this._b=e[7]>>>0<c[7]>>>0?1:0;for(r=0;r<8;r++){var i=t[r]+e[r],o=65535&i,n=i>>>16;a[r]=((o*o>>>17)+o*n>>>15)+n*n^((4294901760&i)*i|0)+((65535&i)*i|0)}t[0]=a[0]+(a[7]<<16|a[7]>>>16)+(a[6]<<16|a[6]>>>16)|0,t[1]=a[1]+(a[0]<<8|a[0]>>>24)+a[7]|0,t[2]=a[2]+(a[1]<<16|a[1]>>>16)+(a[0]<<16|a[0]>>>16)|0,t[3]=a[3]+(a[2]<<8|a[2]>>>24)+a[1]|0,t[4]=a[4]+(a[3]<<16|a[3]>>>16)+(a[2]<<16|a[2]>>>16)|0,t[5]=a[5]+(a[4]<<8|a[4]>>>24)+a[3]|0,t[6]=a[6]+(a[5]<<16|a[5]>>>16)+(a[4]<<16|a[4]>>>16)|0,t[7]=a[7]+(a[6]<<8|a[6]>>>24)+a[5]|0}function z2(){for(var t=this._X,e=this._C,r=0;r<8;r++)f[r]=e[r];e[0]=e[0]+1295307597+this._b|0,e[1]=e[1]+3545052371+(e[0]>>>0<f[0]>>>0?1:0)|0,e[2]=e[2]+886263092+(e[1]>>>0<f[1]>>>0?1:0)|0,e[3]=e[3]+1295307597+(e[2]>>>0<f[2]>>>0?1:0)|0,e[4]=e[4]+3545052371+(e[3]>>>0<f[3]>>>0?1:0)|0,e[5]=e[5]+886263092+(e[4]>>>0<f[4]>>>0?1:0)|0,e[6]=e[6]+1295307597+(e[5]>>>0<f[5]>>>0?1:0)|0,e[7]=e[7]+3545052371+(e[6]>>>0<f[6]>>>0?1:0)|0,this._b=e[7]>>>0<f[7]>>>0?1:0;for(r=0;r<8;r++){var i=t[r]+e[r],o=65535&i,n=i>>>16;d[r]=((o*o>>>17)+o*n>>>15)+n*n^((4294901760&i)*i|0)+((65535&i)*i|0)}t[0]=d[0]+(d[7]<<16|d[7]>>>16)+(d[6]<<16|d[6]>>>16)|0,t[1]=d[1]+(d[0]<<8|d[0]>>>24)+d[7]|0,t[2]=d[2]+(d[1]<<16|d[1]>>>16)+(d[0]<<16|d[0]>>>16)|0,t[3]=d[3]+(d[2]<<8|d[2]>>>24)+d[1]|0,t[4]=d[4]+(d[3]<<16|d[3]>>>16)+(d[2]<<16|d[2]>>>16)|0,t[5]=d[5]+(d[4]<<8|d[4]>>>24)+d[3]|0,t[6]=d[6]+(d[5]<<16|d[5]>>>16)+(d[4]<<16|d[4]>>>16)|0,t[7]=d[7]+(d[6]<<8|d[6]>>>24)+d[5]|0}u.RC4=P._createHelper(m2),w=w.RC4Drop=m2.extend({cfg:m2.cfg.extend({drop:192}),_doReset:function(){m2._doReset.call(this);for(var t=this.cfg.drop;0<t;t--)S2.call(this)}}),u.RC4Drop=P._createHelper(w),u=(p=i).lib.StreamCipher,P=p.algo,n=[],c=[],a=[],P=P.Rabbit=u.extend({_doReset:function(){for(var t=this._key.words,e=this.cfg.iv,r=0;r<4;r++)t[r]=16711935&(t[r]<<8|t[r]>>>24)|4278255360&(t[r]<<24|t[r]>>>8);for(var i=this._X=[t[0],t[3]<<16|t[2]>>>16,t[1],t[0]<<16|t[3]>>>16,t[2],t[1]<<16|t[0]>>>16,t[3],t[2]<<16|t[1]>>>16],o=this._C=[t[2]<<16|t[2]>>>16,4294901760&t[0]|65535&t[1],t[3]<<16|t[3]>>>16,4294901760&t[1]|65535&t[2],t[0]<<16|t[0]>>>16,4294901760&t[2]|65535&t[3],t[1]<<16|t[1]>>>16,4294901760&t[3]|65535&t[0]],r=this._b=0;r<4;r++)A2.call(this);for(r=0;r<8;r++)o[r]^=i[r+4&7];if(e){var e=e.words,n=e[0],e=e[1],n=16711935&(n<<8|n>>>24)|4278255360&(n<<24|n>>>8),e=16711935&(e<<8|e>>>24)|4278255360&(e<<24|e>>>8),s=n>>>16|4294901760&e,c=e<<16|65535&n;o[0]^=n,o[1]^=s,o[2]^=e,o[3]^=c,o[4]^=n,o[5]^=s,o[6]^=e,o[7]^=c;for(r=0;r<4;r++)A2.call(this)}},_doProcessBlock:function(t,e){var r=this._X;A2.call(this),n[0]=r[0]^r[5]>>>16^r[3]<<16,n[1]=r[2]^r[7]>>>16^r[5]<<16,n[2]=r[4]^r[1]>>>16^r[7]<<16,n[3]=r[6]^r[3]>>>16^r[1]<<16;for(var i=0;i<4;i++)n[i]=16711935&(n[i]<<8|n[i]>>>24)|4278255360&(n[i]<<24|n[i]>>>8),t[e+i]^=n[i]},blockSize:4,ivSize:2}),p.Rabbit=u._createHelper(P),p=(w=i).lib.StreamCipher,u=w.algo,h=[],f=[],d=[],u=u.RabbitLegacy=p.extend({_doReset:function(){for(var t=this._key.words,e=this.cfg.iv,r=this._X=[t[0],t[3]<<16|t[2]>>>16,t[1],t[0]<<16|t[3]>>>16,t[2],t[1]<<16|t[0]>>>16,t[3],t[2]<<16|t[1]>>>16],i=this._C=[t[2]<<16|t[2]>>>16,4294901760&t[0]|65535&t[1],t[3]<<16|t[3]>>>16,4294901760&t[1]|65535&t[2],t[0]<<16|t[0]>>>16,4294901760&t[2]|65535&t[3],t[1]<<16|t[1]>>>16,4294901760&t[3]|65535&t[0]],o=this._b=0;o<4;o++)z2.call(this);for(o=0;o<8;o++)i[o]^=r[o+4&7];if(e){var t=e.words,e=t[0],t=t[1],e=16711935&(e<<8|e>>>24)|4278255360&(e<<24|e>>>8),t=16711935&(t<<8|t>>>24)|4278255360&(t<<24|t>>>8),n=e>>>16|4294901760&t,s=t<<16|65535&e;i[0]^=e,i[1]^=n,i[2]^=t,i[3]^=s,i[4]^=e,i[5]^=n,i[6]^=t,i[7]^=s;for(o=0;o<4;o++)z2.call(this)}},_doProcessBlock:function(t,e){var r=this._X;z2.call(this),h[0]=r[0]^r[5]>>>16^r[3]<<16,h[1]=r[2]^r[7]>>>16^r[5]<<16,h[2]=r[4]^r[1]>>>16^r[7]<<16,h[3]=r[6]^r[3]>>>16^r[1]<<16;for(var i=0;i<4;i++)h[i]=16711935&(h[i]<<8|h[i]>>>24)|4278255360&(h[i]<<24|h[i]>>>8),t[e+i]^=h[i]},blockSize:4,ivSize:2}),w.RabbitLegacy=p._createHelper(u);{w=(P=i).lib.BlockCipher,p=P.algo;const F=16,D2=[608135816,2242054355,320440878,57701188,2752067618,698298832,137296536,3964562569,1160258022,953160567,3193202383,887688300,3232508343,3380367581,1065670069,3041331479,2450970073,2306472731],E2=[[3509652390,2564797868,805139163,3491422135,3101798381,1780907670,3128725573,4046225305,614570311,3012652279,134345442,2240740374,1667834072,1901547113,2757295779,4103290238,227898511,1921955416,1904987480,2182433518,2069144605,3260701109,2620446009,720527379,3318853667,677414384,3393288472,3101374703,2390351024,1614419982,1822297739,2954791486,3608508353,3174124327,2024746970,1432378464,3864339955,2857741204,1464375394,1676153920,1439316330,715854006,3033291828,289532110,2706671279,2087905683,3018724369,1668267050,732546397,1947742710,3462151702,2609353502,2950085171,1814351708,2050118529,680887927,999245976,1800124847,3300911131,1713906067,1641548236,4213287313,1216130144,1575780402,4018429277,3917837745,3693486850,3949271944,596196993,3549867205,258830323,2213823033,772490370,2760122372,1774776394,2652871518,566650946,4142492826,1728879713,2882767088,1783734482,3629395816,2517608232,2874225571,1861159788,326777828,3124490320,2130389656,2716951837,967770486,1724537150,2185432712,2364442137,1164943284,2105845187,998989502,3765401048,2244026483,1075463327,1455516326,1322494562,910128902,469688178,1117454909,936433444,3490320968,3675253459,1240580251,122909385,2157517691,634681816,4142456567,3825094682,3061402683,2540495037,79693498,3249098678,1084186820,1583128258,426386531,1761308591,1047286709,322548459,995290223,1845252383,2603652396,3431023940,2942221577,3202600964,3727903485,1712269319,422464435,3234572375,1170764815,3523960633,3117677531,1434042557,442511882,3600875718,1076654713,1738483198,4213154764,2393238008,3677496056,1014306527,4251020053,793779912,2902807211,842905082,4246964064,1395751752,1040244610,2656851899,3396308128,445077038,3742853595,3577915638,679411651,2892444358,2354009459,1767581616,3150600392,3791627101,3102740896,284835224,4246832056,1258075500,768725851,2589189241,3069724005,3532540348,1274779536,3789419226,2764799539,1660621633,3471099624,4011903706,913787905,3497959166,737222580,2514213453,2928710040,3937242737,1804850592,3499020752,2949064160,2386320175,2390070455,2415321851,4061277028,2290661394,2416832540,1336762016,1754252060,3520065937,3014181293,791618072,3188594551,3933548030,2332172193,3852520463,3043980520,413987798,3465142937,3030929376,4245938359,2093235073,3534596313,375366246,2157278981,2479649556,555357303,3870105701,2008414854,3344188149,4221384143,3956125452,2067696032,3594591187,2921233993,2428461,544322398,577241275,1471733935,610547355,4027169054,1432588573,1507829418,2025931657,3646575487,545086370,48609733,2200306550,1653985193,298326376,1316178497,3007786442,2064951626,458293330,2589141269,3591329599,3164325604,727753846,2179363840,146436021,1461446943,4069977195,705550613,3059967265,3887724982,4281599278,3313849956,1404054877,2845806497,146425753,1854211946],[1266315497,3048417604,3681880366,3289982499,290971e4,1235738493,2632868024,2414719590,3970600049,1771706367,1449415276,3266420449,422970021,1963543593,2690192192,3826793022,1062508698,1531092325,1804592342,2583117782,2714934279,4024971509,1294809318,4028980673,1289560198,2221992742,1669523910,35572830,157838143,1052438473,1016535060,1802137761,1753167236,1386275462,3080475397,2857371447,1040679964,2145300060,2390574316,1461121720,2956646967,4031777805,4028374788,33600511,2920084762,1018524850,629373528,3691585981,3515945977,2091462646,2486323059,586499841,988145025,935516892,3367335476,2599673255,2839830854,265290510,3972581182,2759138881,3795373465,1005194799,847297441,406762289,1314163512,1332590856,1866599683,4127851711,750260880,613907577,1450815602,3165620655,3734664991,3650291728,3012275730,3704569646,1427272223,778793252,1343938022,2676280711,2052605720,1946737175,3164576444,3914038668,3967478842,3682934266,1661551462,3294938066,4011595847,840292616,3712170807,616741398,312560963,711312465,1351876610,322626781,1910503582,271666773,2175563734,1594956187,70604529,3617834859,1007753275,1495573769,4069517037,2549218298,2663038764,504708206,2263041392,3941167025,2249088522,1514023603,1998579484,1312622330,694541497,2582060303,2151582166,1382467621,776784248,2618340202,3323268794,2497899128,2784771155,503983604,4076293799,907881277,423175695,432175456,1378068232,4145222326,3954048622,3938656102,3820766613,2793130115,2977904593,26017576,3274890735,3194772133,1700274565,1756076034,4006520079,3677328699,720338349,1533947780,354530856,688349552,3973924725,1637815568,332179504,3949051286,53804574,2852348879,3044236432,1282449977,3583942155,3416972820,4006381244,1617046695,2628476075,3002303598,1686838959,431878346,2686675385,1700445008,1080580658,1009431731,832498133,3223435511,2605976345,2271191193,2516031870,1648197032,4164389018,2548247927,300782431,375919233,238389289,3353747414,2531188641,2019080857,1475708069,455242339,2609103871,448939670,3451063019,1395535956,2413381860,1841049896,1491858159,885456874,4264095073,4001119347,1565136089,3898914787,1108368660,540939232,1173283510,2745871338,3681308437,4207628240,3343053890,4016749493,1699691293,1103962373,3625875870,2256883143,3830138730,1031889488,3479347698,1535977030,4236805024,3251091107,2132092099,1774941330,1199868427,1452454533,157007616,2904115357,342012276,595725824,1480756522,206960106,497939518,591360097,863170706,2375253569,3596610801,1814182875,2094937945,3421402208,1082520231,3463918190,2785509508,435703966,3908032597,1641649973,2842273706,3305899714,1510255612,2148256476,2655287854,3276092548,4258621189,236887753,3681803219,274041037,1734335097,3815195456,3317970021,1899903192,1026095262,4050517792,356393447,2410691914,3873677099,3682840055],[3913112168,2491498743,4132185628,2489919796,1091903735,1979897079,3170134830,3567386728,3557303409,857797738,1136121015,1342202287,507115054,2535736646,337727348,3213592640,1301675037,2528481711,1895095763,1721773893,3216771564,62756741,2142006736,835421444,2531993523,1442658625,3659876326,2882144922,676362277,1392781812,170690266,3921047035,1759253602,3611846912,1745797284,664899054,1329594018,3901205900,3045908486,2062866102,2865634940,3543621612,3464012697,1080764994,553557557,3656615353,3996768171,991055499,499776247,1265440854,648242737,3940784050,980351604,3713745714,1749149687,3396870395,4211799374,3640570775,1161844396,3125318951,1431517754,545492359,4268468663,3499529547,1437099964,2702547544,3433638243,2581715763,2787789398,1060185593,1593081372,2418618748,4260947970,69676912,2159744348,86519011,2512459080,3838209314,1220612927,3339683548,133810670,1090789135,1078426020,1569222167,845107691,3583754449,4072456591,1091646820,628848692,1613405280,3757631651,526609435,236106946,48312990,2942717905,3402727701,1797494240,859738849,992217954,4005476642,2243076622,3870952857,3732016268,765654824,3490871365,2511836413,1685915746,3888969200,1414112111,2273134842,3281911079,4080962846,172450625,2569994100,980381355,4109958455,2819808352,2716589560,2568741196,3681446669,3329971472,1835478071,660984891,3704678404,4045999559,3422617507,3040415634,1762651403,1719377915,3470491036,2693910283,3642056355,3138596744,1364962596,2073328063,1983633131,926494387,3423689081,2150032023,4096667949,1749200295,3328846651,309677260,2016342300,1779581495,3079819751,111262694,1274766160,443224088,298511866,1025883608,3806446537,1145181785,168956806,3641502830,3584813610,1689216846,3666258015,3200248200,1692713982,2646376535,4042768518,1618508792,1610833997,3523052358,4130873264,2001055236,3610705100,2202168115,4028541809,2961195399,1006657119,2006996926,3186142756,1430667929,3210227297,1314452623,4074634658,4101304120,2273951170,1399257539,3367210612,3027628629,1190975929,2062231137,2333990788,2221543033,2438960610,1181637006,548689776,2362791313,3372408396,3104550113,3145860560,296247880,1970579870,3078560182,3769228297,1714227617,3291629107,3898220290,166772364,1251581989,493813264,448347421,195405023,2709975567,677966185,3703036547,1463355134,2715995803,1338867538,1343315457,2802222074,2684532164,233230375,2599980071,2000651841,3277868038,1638401717,4028070440,3237316320,6314154,819756386,300326615,590932579,1405279636,3267499572,3150704214,2428286686,3959192993,3461946742,1862657033,1266418056,963775037,2089974820,2263052895,1917689273,448879540,3550394620,3981727096,150775221,3627908307,1303187396,508620638,2975983352,2726630617,1817252668,1876281319,1457606340,908771278,3720792119,3617206836,2455994898,1729034894,1080033504],[976866871,3556439503,2881648439,1522871579,1555064734,1336096578,3548522304,2579274686,3574697629,3205460757,3593280638,3338716283,3079412587,564236357,2993598910,1781952180,1464380207,3163844217,3332601554,1699332808,1393555694,1183702653,3581086237,1288719814,691649499,2847557200,2895455976,3193889540,2717570544,1781354906,1676643554,2592534050,3230253752,1126444790,2770207658,2633158820,2210423226,2615765581,2414155088,3127139286,673620729,2805611233,1269405062,4015350505,3341807571,4149409754,1057255273,2012875353,2162469141,2276492801,2601117357,993977747,3918593370,2654263191,753973209,36408145,2530585658,25011837,3520020182,2088578344,530523599,2918365339,1524020338,1518925132,3760827505,3759777254,1202760957,3985898139,3906192525,674977740,4174734889,2031300136,2019492241,3983892565,4153806404,3822280332,352677332,2297720250,60907813,90501309,3286998549,1016092578,2535922412,2839152426,457141659,509813237,4120667899,652014361,1966332200,2975202805,55981186,2327461051,676427537,3255491064,2882294119,3433927263,1307055953,942726286,933058658,2468411793,3933900994,4215176142,1361170020,2001714738,2830558078,3274259782,1222529897,1679025792,2729314320,3714953764,1770335741,151462246,3013232138,1682292957,1483529935,471910574,1539241949,458788160,3436315007,1807016891,3718408830,978976581,1043663428,3165965781,1927990952,4200891579,2372276910,3208408903,3533431907,1412390302,2931980059,4132332400,1947078029,3881505623,4168226417,2941484381,1077988104,1320477388,886195818,18198404,3786409e3,2509781533,112762804,3463356488,1866414978,891333506,18488651,661792760,1628790961,3885187036,3141171499,876946877,2693282273,1372485963,791857591,2686433993,3759982718,3167212022,3472953795,2716379847,445679433,3561995674,3504004811,3574258232,54117162,3331405415,2381918588,3769707343,4154350007,1140177722,4074052095,668550556,3214352940,367459370,261225585,2610173221,4209349473,3468074219,3265815641,314222801,3066103646,3808782860,282218597,3406013506,3773591054,379116347,1285071038,846784868,2669647154,3771962079,3550491691,2305946142,453669953,1268987020,3317592352,3279303384,3744833421,2610507566,3859509063,266596637,3847019092,517658769,3462560207,3443424879,370717030,4247526661,2224018117,4143653529,4112773975,2788324899,2477274417,1456262402,2901442914,1517677493,1846949527,2295493580,3734397586,2176403920,1280348187,1908823572,3871786941,846861322,1172426758,3287448474,3383383037,1655181056,3139813346,901632758,1897031941,2986607138,3066810236,3447102507,1393639104,373351379,950779232,625454576,3124240540,4148612726,2007998917,544563296,2244738638,2330496472,2058025392,1291430526,424198748,50039436,29584100,3605783033,2429876329,2791104160,1057563949,3255363231,3075367218,3463963227,1469046755,985887462]];var H2={pbox:[],sbox:[]};function C2(t,e){var r=t.sbox[0][e>>24&255]+t.sbox[1][e>>16&255];return r=(r^=t.sbox[2][e>>8&255])+t.sbox[3][255&e]}function R2(e,t,r){let i=t,o=r,n;for(let t=0;t<F;++t)i^=e.pbox[t],o=C2(e,i)^o,n=i,i=o,o=n;return n=i,i=o,o=n,o^=e.pbox[F],{left:i^=e.pbox[F+1],right:o}}p=p.Blowfish=w.extend({_doReset:function(){if(this._keyPriorReset!==this._key){var t=this._keyPriorReset=this._key,n=t.words,t=t.sigBytes/4;{var s=H2,c=n,a=t;for(let e=0;e<4;e++){s.sbox[e]=[];for(let t=0;t<256;t++)s.sbox[e][t]=E2[e][t]}let e=0;for(let t=0;t<F+2;t++)s.pbox[t]=D2[t]^c[e],++e>=a&&(e=0);let r=0,i=0,o=0;for(let t=0;t<F+2;t+=2)o=R2(s,r,i),r=o.left,i=o.right,s.pbox[t]=r,s.pbox[t+1]=i;for(let e=0;e<4;e++)for(let t=0;t<256;t+=2)o=R2(s,r,i),r=o.left,i=o.right,s.sbox[e][t]=r,s.sbox[e][t+1]=i}}},encryptBlock:function(t,e){var r=R2(H2,t[e],t[e+1]);t[e]=r.left,t[e+1]=r.right},decryptBlock:function(t,e){var r=function(e,t,r){let i=t,o=r,n;for(let t=F+1;1<t;--t)i^=e.pbox[t],o=C2(e,i)^o,n=i,i=o,o=n;return n=i,i=o,o=n,o^=e.pbox[1],{left:i^=e.pbox[0],right:o}}(H2,t[e],t[e+1]);t[e]=r.left,t[e+1]=r.right},blockSize:2,keySize:4,ivSize:2}),P.Blowfish=w._createHelper(p)}return i});
-  return globalObj.CryptoJS;
-})();
+const mangayomiSources = [
+  {
+    "name": "ReAnime",
+    "id": 631942785,
+    "baseUrl": "https://reanime.cz",
+    "lang": "en",
+    "typeSource": "single",
+    "iconUrl":
+      "https://www.google.com/s2/favicons?sz=256&domain=https://reanime.cz",
+    "dateFormat": "",
+    "dateFormatLocale": "",
+    "isNsfw": false,
+    "hasCloudflare": false,
+    "sourceCodeUrl":
+      "https://raw.githubusercontent.com/Mallyd11/mangayomi-anime-extensions/refs/heads/main/javascript/anime/src/en/reanime.js",
+    "apiUrl": "https://reanime.cz",
+    "version": "0.5.2",
+    "isManga": false,
+    "itemType": 1,
+    "isFullData": false,
+    "appMinVerReq": "0.5.0",
+    "additionalParams": "",
+    "sourceCodeLanguage": 1,
+    "notes": "",
+    "pkgPath": "anime/src/en/reanime.js",
+  },
+];
 
+// ════════════════════════════════════════════════════════════════════════════
+//  Pure-JS crypto (SHA-256 / HMAC / PBKDF2 / AES-256-CBC)
+//
+//  Mangayomi runs extensions in QuickJS, which has neither WebCrypto
+//  (crypto.subtle) nor WebAssembly.  The flixcloud stream payload is protected
+//  by an AES-256-CBC key derived through PBKDF2 + a per-request WASM cipher, so
+//  every primitive below is reimplemented from scratch.  Each one was validated
+//  byte-for-byte against the browser's native crypto.subtle / WebAssembly.
+// ════════════════════════════════════════════════════════════════════════════
 
-const mangayomiSources = [{
-  name: "re:ainme",
-  lang: "en",
-  baseUrl: "https://reanime.to",
-  apiUrl: "https://reanime.to/api",
-  iconUrl: "https://reanime.to/favicon.ico",
-  typeSource: "single",
-  itemType: 1,
-  isNsfw: false,
-  hasCloudflare: false,
-  version: "0.1.2",
-  dateFormat: "",
-  dateFormatLocale: "",
-  pkgPath: "anime/src/en/reainme.js",
-  notes: "Re:ANIME v1 API · SvelteKit __data.json & SSR fallback · FlixCloud Pure JS WASM/AES Decryption · Multi-Quality Streams & Subtitles"
-}];
+const _K256 = [
+  0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
+  0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+  0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+  0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+  0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,
+  0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+  0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
+  0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,
+];
 
-// --- SvelteKit RefTable Parser ---
-class SvelteKitRefTable {
-  constructor(data) {
-    this.data = Array.isArray(data) ? data : [];
-  }
-
-  raw(index) {
-    return (index >= 0 && index < this.data.length) ? this.data[index] : null;
-  }
-
-  obj(index) {
-    const value = this.raw(index);
-    return (value && typeof value === "object" && !Array.isArray(value)) ? value : null;
-  }
-
-  resolve(value) {
-    if (typeof value === "number" && Number.isInteger(value) && value >= 0 && value < this.data.length) {
-      return this.raw(value);
+function sha256(msg) {
+  let h0 = 0x6a09e667, h1 = 0xbb67ae85, h2 = 0x3c6ef372, h3 = 0xa54ff53a;
+  let h4 = 0x510e527f, h5 = 0x9b05688c, h6 = 0x1f83d9ab, h7 = 0x5be0cd19;
+  const l = msg.length, bitLen = l * 8;
+  const total = (((l + 8) >> 6) + 1) << 6;
+  const b = new Uint8Array(total);
+  b.set(msg);
+  b[l] = 0x80;
+  for (let i = 0; i < 4; i++) b[total - 1 - i] = (bitLen >>> (8 * i)) & 0xff;
+  const w = new Int32Array(64);
+  for (let off = 0; off < total; off += 64) {
+    for (let i = 0; i < 16; i++)
+      w[i] = (b[off + 4 * i] << 24) | (b[off + 4 * i + 1] << 16) | (b[off + 4 * i + 2] << 8) | b[off + 4 * i + 3];
+    for (let i = 16; i < 64; i++) {
+      const x = w[i - 15], s0 = ((x >>> 7) | (x << 25)) ^ ((x >>> 18) | (x << 14)) ^ (x >>> 3);
+      const y = w[i - 2], s1 = ((y >>> 17) | (y << 15)) ^ ((y >>> 19) | (y << 13)) ^ (y >>> 10);
+      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
     }
-    return value;
-  }
-
-  objRef(parent, key) {
-    if (!parent || typeof parent !== "object") return null;
-    const resolved = this.resolve(parent[key]);
-    return (resolved && typeof resolved === "object" && !Array.isArray(resolved)) ? resolved : null;
-  }
-
-  arrayRef(parent, key) {
-    if (!parent || typeof parent !== "object") return [];
-    const resolved = this.resolve(parent[key]);
-    if (Array.isArray(resolved)) {
-      return resolved.map((item) => this.resolve(item));
+    let a = h0, bb = h1, c = h2, d = h3, e = h4, f = h5, g = h6, hh = h7;
+    for (let i = 0; i < 64; i++) {
+      const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+      const ch = (e & f) ^ (~e & g);
+      const t1 = (hh + S1 + ch + _K256[i] + w[i]) | 0;
+      const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+      const maj = (a & bb) ^ (a & c) ^ (bb & c);
+      const t2 = (S0 + maj) | 0;
+      hh = g; g = f; f = e; e = (d + t1) | 0; d = c; c = bb; bb = a; a = (t1 + t2) | 0;
     }
-    return [];
+    h0 = (h0 + a) | 0; h1 = (h1 + bb) | 0; h2 = (h2 + c) | 0; h3 = (h3 + d) | 0;
+    h4 = (h4 + e) | 0; h5 = (h5 + f) | 0; h6 = (h6 + g) | 0; h7 = (h7 + hh) | 0;
   }
-
-  stringRef(parent, key) {
-    if (!parent || typeof parent !== "object") return "";
-    const direct = parent[key];
-    if (typeof direct === "number") {
-      const resolved = this.raw(direct);
-      if (typeof resolved === "string") return resolved.trim();
-    }
-    const val = this.resolve(direct);
-    return (val !== null && val !== undefined) ? String(val).trim() : "";
+  const out = new Uint8Array(32), hs = [h0, h1, h2, h3, h4, h5, h6, h7];
+  for (let i = 0; i < 8; i++) {
+    out[4 * i] = (hs[i] >>> 24) & 0xff; out[4 * i + 1] = (hs[i] >>> 16) & 0xff;
+    out[4 * i + 2] = (hs[i] >>> 8) & 0xff; out[4 * i + 3] = hs[i] & 0xff;
   }
-
-  intRef(parent, key) {
-    if (!parent || typeof parent !== "object") return 0;
-    const direct = parent[key];
-    if (typeof direct === "number") {
-      const resolved = this.raw(direct);
-      if (typeof resolved === "number") return Math.floor(resolved);
-      if (typeof resolved === "string" && /^-?\d+$/.test(resolved.trim())) return parseInt(resolved.trim(), 10);
-      return Math.floor(direct);
-    }
-    if (typeof direct === "string" && /^-?\d+$/.test(direct.trim())) return parseInt(direct.trim(), 10);
-    return 0;
-  }
-
-  boolRef(parent, key) {
-    if (!parent || typeof parent !== "object") return false;
-    const direct = parent[key];
-    if (typeof direct === "number") {
-      const resolved = this.raw(direct);
-      if (typeof resolved === "boolean") return resolved;
-    }
-    return Boolean(this.resolve(direct));
-  }
-
-  stringArrayRef(parent, key) {
-    const arr = this.arrayRef(parent, key);
-    return arr.map((item) => {
-      const val = this.resolve(item);
-      return (val !== null && val !== undefined) ? String(val).trim() : "";
-    }).filter(Boolean);
-  }
-
-  objectArrayRef(parent, key) {
-    const arr = this.arrayRef(parent, key);
-    return arr.map((item) => {
-      const val = this.resolve(item);
-      return (val && typeof val === "object" && !Array.isArray(val)) ? val : null;
-    }).filter(Boolean);
-  }
-
-  dateRef(parent, key) {
-    const d = this.objRef(parent, key);
-    if (!d) return "";
-    const day = this.intRef(d, "day");
-    const month = this.intRef(d, "month");
-    const year = this.intRef(d, "year");
-    if (year > 0) {
-      const mm = String(month || 1).padStart(2, "0");
-      const dd = String(day || 1).padStart(2, "0");
-      return `${year}-${mm}-${dd}`;
-    }
-    return "";
-  }
-}
-
-// --- FlixCloud Crypto & WASM Decryptor Helpers ---
-
-function b64toU8(s) {
-  const binary = atob(String(s).replace(/-/g, "+").replace(/_/g, "/"));
-  const out = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
   return out;
-}
-
-function u8toWordArray(u8) {
-  const words = [];
-  for (let i = 0; i < u8.length; i += 4) {
-    words.push(
-      ((u8[i] || 0) << 24) |
-      ((u8[i + 1] || 0) << 16) |
-      ((u8[i + 2] || 0) << 8) |
-      (u8[i + 3] || 0)
-    );
-  }
-  return CryptoJS.lib.WordArray.create(words, u8.length);
-}
-
-function wordArrayToU8(wordArray) {
-  const words = wordArray.words;
-  const sigBytes = wordArray.sigBytes;
-  const u8 = new Uint8Array(sigBytes);
-  let offset = 0;
-  for (let i = 0; i < words.length; i++) {
-    const w = words[i];
-    if (offset < sigBytes) u8[offset++] = (w >>> 24) & 0xff;
-    if (offset < sigBytes) u8[offset++] = (w >>> 16) & 0xff;
-    if (offset < sigBytes) u8[offset++] = (w >>> 8) & 0xff;
-    if (offset < sigBytes) u8[offset++] = w & 0xff;
-  }
-  return u8;
 }
 
 function sha256Hex(str) {
-  return CryptoJS.SHA256(str).toString(CryptoJS.enc.Hex);
+  const bytes = sha256(utf8(str));
+  let s = "";
+  for (let i = 0; i < bytes.length; i++) s += bytes[i].toString(16).padStart(2, "0");
+  return s;
 }
 
-function deriveFlixFields(seed) {
-  let e = seed;
-  for (let i = 0; i < 3; i++) e = sha256Hex(e + i);
-  let a = e;
-  for (let i = 0; i < 3; i++) a = sha256Hex(a + i);
-  return {
-    videoField: "vf_" + e.substring(0, 8),
-    keyField: "kf_" + e.substring(8, 16),
-    ivField: "ivf_" + e.substring(16, 24),
-    containerName: "cd_" + e.substring(24, 32),
-    arrayName: "ad_" + e.substring(32, 40),
-    objectName: "od_" + e.substring(40, 48),
-    tokenField: e.substring(48, 64) + "_" + e.substring(56, 64),
-    keyFrag2Field: a.substring(0, 16) + "_" + a.substring(16, 24)
+function hmacSha256(key, msg) {
+  const blockSize = 64;
+  let k = key;
+  if (k.length > blockSize) k = sha256(k);
+  const ki = new Uint8Array(blockSize), ko = new Uint8Array(blockSize);
+  ki.set(k); ko.set(k);
+  for (let i = 0; i < blockSize; i++) { ki[i] ^= 0x36; ko[i] ^= 0x5c; }
+  const inner = new Uint8Array(blockSize + msg.length);
+  inner.set(ki); inner.set(msg, blockSize);
+  const ih = sha256(inner);
+  const outer = new Uint8Array(blockSize + 32);
+  outer.set(ko); outer.set(ih, blockSize);
+  return sha256(outer);
+}
+
+// PBKDF2-HMAC-SHA256, single output block (dkLen <= 32).
+function pbkdf2(password, salt, iterations, dkLen) {
+  const block = new Uint8Array(salt.length + 4);
+  block.set(salt);
+  block[salt.length + 3] = 1;
+  let u = hmacSha256(password, block);
+  const t = u.slice();
+  for (let i = 1; i < iterations; i++) {
+    u = hmacSha256(password, u);
+    for (let j = 0; j < 32; j++) t[j] ^= u[j];
+  }
+  return t.slice(0, dkLen);
+}
+
+// ── AES (decrypt only) ────────────────────────────────────────────────────────
+const _AES_SBOX = new Uint8Array(256), _AES_INV = new Uint8Array(256);
+(function () {
+  let p = 1, q = 1;
+  do {
+    p = p ^ (p << 1) ^ ((p & 0x80) ? 0x11b : 0); p &= 0xff;
+    q ^= q << 1; q ^= q << 2; q ^= q << 4; q &= 0xff; if (q & 0x80) q ^= 0x09;
+    const x = q ^ ((q << 1) | (q >> 7)) ^ ((q << 2) | (q >> 6)) ^ ((q << 3) | (q >> 5)) ^ ((q << 4) | (q >> 4));
+    _AES_SBOX[p] = (x & 0xff) ^ 0x63;
+  } while (p !== 1);
+  _AES_SBOX[0] = 0x63;
+  for (let i = 0; i < 256; i++) _AES_INV[_AES_SBOX[i]] = i;
+})();
+
+function _gmul(a, b) {
+  let r = 0;
+  for (let i = 0; i < 8; i++) {
+    if (b & 1) r ^= a;
+    const hi = a & 0x80; a = (a << 1) & 0xff; if (hi) a ^= 0x1b; b >>= 1;
+  }
+  return r;
+}
+
+function _aesExpandKey(key) {
+  const Nk = key.length >> 2, Nr = Nk + 6, w = new Array(4 * (Nr + 1));
+  for (let i = 0; i < Nk; i++) w[i] = [key[4 * i], key[4 * i + 1], key[4 * i + 2], key[4 * i + 3]];
+  let rcon = 1;
+  for (let i = Nk; i < 4 * (Nr + 1); i++) {
+    let t = w[i - 1].slice();
+    if (i % Nk === 0) {
+      t = [t[1], t[2], t[3], t[0]].map((x) => _AES_SBOX[x]);
+      t[0] ^= rcon;
+      rcon = ((rcon << 1) ^ ((rcon & 0x80) ? 0x1b : 0)) & 0xff;
+    } else if (Nk > 6 && i % Nk === 4) {
+      t = t.map((x) => _AES_SBOX[x]);
+    }
+    w[i] = w[i - Nk].map((x, j) => x ^ t[j]);
+  }
+  return w;
+}
+
+function _aesInvCipher(blk, w) {
+  const Nr = (w.length >> 2) - 1;
+  const s = [[], [], [], []];
+  for (let i = 0; i < 16; i++) s[i % 4][(i / 4) | 0] = blk[i];
+  const ark = (r) => { for (let c = 0; c < 4; c++) for (let row = 0; row < 4; row++) s[row][c] ^= w[r * 4 + c][row]; };
+  const isr = () => {
+    for (let row = 1; row < 4; row++) {
+      const t = [s[row][0], s[row][1], s[row][2], s[row][3]];
+      for (let c = 0; c < 4; c++) s[row][c] = t[(c - row + 4) % 4];
+    }
   };
-}
-
-function readLeb(bytes, position) {
-  let value = 0, shift = 0, next;
-  do {
-    next = bytes[position++];
-    value |= (next & 127) << shift;
-    shift += 7;
-  } while (next & 128);
-  return [value, position];
-}
-
-function extractPlaylistKey(wasmBytes) {
-  try {
-    let position = 8;
-    while (position < wasmBytes.length) {
-      const section = wasmBytes[position++];
-      const [size, nextPosition] = readLeb(wasmBytes, position);
-      position = nextPosition;
-      if (section === 11) {
-        const end = position + size;
-        let dataPosition = position;
-        const [count, countPosition] = readLeb(wasmBytes, dataPosition);
-        dataPosition = countPosition;
-        for (let i = 0; i < count && dataPosition < end; i++) {
-          const [, flagsPosition] = readLeb(wasmBytes, dataPosition);
-          dataPosition = flagsPosition;
-          if (wasmBytes[dataPosition] !== 65) break;
-          dataPosition++;
-          const [, offsetPosition] = readLeb(wasmBytes, dataPosition);
-          dataPosition = offsetPosition;
-          if (wasmBytes[dataPosition] === 11) dataPosition++;
-          const [dataLength, lengthPosition] = readLeb(wasmBytes, dataPosition);
-          dataPosition = lengthPosition;
-          const segment = wasmBytes.slice(dataPosition, dataPosition + dataLength);
-          dataPosition += dataLength;
-          if (segment.length >= 64) {
-            const out = new Uint8Array(32);
-            for (let j = 0; j < 32; j++) out[j] = segment[j] ^ segment[j + 32];
-            let binary = "";
-            for (let j = 0; j < 32; j++) binary += String.fromCharCode(out[j]);
-            return btoa(binary);
-          }
-        }
-      }
-      position += size;
+  const isb = () => { for (let i = 0; i < 4; i++) for (let c = 0; c < 4; c++) s[i][c] = _AES_INV[s[i][c]]; };
+  const imc = () => {
+    for (let c = 0; c < 4; c++) {
+      const a0 = s[0][c], a1 = s[1][c], a2 = s[2][c], a3 = s[3][c];
+      s[0][c] = _gmul(a0, 14) ^ _gmul(a1, 11) ^ _gmul(a2, 13) ^ _gmul(a3, 9);
+      s[1][c] = _gmul(a0, 9) ^ _gmul(a1, 14) ^ _gmul(a2, 11) ^ _gmul(a3, 13);
+      s[2][c] = _gmul(a0, 13) ^ _gmul(a1, 9) ^ _gmul(a2, 14) ^ _gmul(a3, 11);
+      s[3][c] = _gmul(a0, 11) ^ _gmul(a1, 13) ^ _gmul(a2, 9) ^ _gmul(a3, 14);
     }
-  } catch (_) {}
-  return null;
-}
-
-function parseWasmDecrypt(bytes) {
-  let position = 8;
-  while (position < bytes.length) {
-    const section = bytes[position++];
-    let size = 0, shift = 0, next;
-    do {
-      next = bytes[position++];
-      size |= (next & 127) << shift;
-      shift += 7;
-    } while (next & 128);
-    if (section === 10) {
-      position++;
-      let bodySize = 0, bodyShift = 0;
-      do {
-        next = bytes[position++];
-        bodySize |= (next & 127) << bodyShift;
-        bodyShift += 7;
-      } while (next & 128);
-      position += bodySize;
-      break;
-    }
-    position += size;
-  }
-  let functionSize = 0, functionShift = 0, next;
-  do {
-    next = bytes[position++];
-    functionSize |= (next & 127) << functionShift;
-    functionShift += 7;
-  } while (next & 128);
-  const body = bytes.slice(position, position + functionSize);
-  function leb(array, index) {
-    let value = 0, shift = 0, next;
-    do {
-      next = array[index++];
-      value |= (next & 127) << shift;
-      shift += 7;
-    } while (next & 128);
-    return [value, index];
-  }
-  const xorEnd = [32, 2, 32, 5, 106, 45, 0, 0, 115, 33, 6];
-  let transformStart = -1;
-  outer: for (let i = 0; i < body.length - xorEnd.length; i++) {
-    for (let j = 0; j < xorEnd.length; j++) if (body[i + j] !== xorEnd[j]) continue outer;
-    transformStart = i + xorEnd.length;
-    break;
-  }
-  if (transformStart < 0) throw new Error("WASM: transform start not found");
-  let transformEnd = -1, step = 36;
-  for (let i = transformStart; i < body.length - 4; i++) {
-    if (body[i] === 32 && body[i + 1] === 5 && body[i + 2] === 65) {
-      const [value, nextIndex] = leb(body, i + 3);
-      if (body[nextIndex] === 108) {
-        transformEnd = i;
-        step = value;
-        break;
-      }
-    }
-  }
-  if (transformEnd < 0) throw new Error("WASM: keystream not found");
-  const code = body.slice(transformStart, transformEnd);
-  function transform(inputByte) {
-    let local = inputByte & 255;
-    const stack = [];
-    let index = 0;
-    while (index < code.length) {
-      const opcode = code[index++];
-      if (opcode === 32) {
-        const [localIndex, nextIndex] = leb(code, index);
-        index = nextIndex;
-        stack.push(localIndex === 6 ? local : 0);
-      } else if (opcode === 33) {
-        const [localIndex, nextIndex] = leb(code, index);
-        index = nextIndex;
-        const value = stack.pop();
-        if (localIndex === 6) local = value & 255;
-      } else if (opcode === 65) {
-        const [value, nextIndex] = leb(code, index);
-        index = nextIndex;
-        stack.push(value);
-      } else if (opcode === 106) {
-        const right = stack.pop(), left = stack.pop();
-        stack.push(left + right & 255);
-      } else if (opcode === 107) {
-        const right = stack.pop(), left = stack.pop();
-        stack.push(left - right + 256 & 255);
-      } else if (opcode === 113) {
-        const right = stack.pop(), left = stack.pop();
-        stack.push(left & right & 255);
-      } else if (opcode === 114) {
-        const right = stack.pop(), left = stack.pop();
-        stack.push(left | right & 255);
-      } else if (opcode === 115) {
-        const right = stack.pop(), left = stack.pop();
-        stack.push(left ^ right & 255);
-      } else if (opcode === 116) {
-        const right = stack.pop(), left = stack.pop();
-        stack.push(left << (right & 7) & 255);
-      } else if (opcode === 118) {
-        const right = stack.pop(), left = stack.pop();
-        stack.push(left >>> (right & 7) & 255);
-      }
-    }
-    return local;
-  }
-  return { step, transform };
-}
-
-function runWasmPureJs(wasmBytes, fragment, keyFragment, token, seed) {
-  const { step, transform } = parseWasmDecrypt(wasmBytes);
-  const out = new Uint8Array(fragment.length);
-  for (let i = 0; i < fragment.length; i++) {
-    const value = fragment[i] ^ keyFragment[i] ^ token[i] & 255;
-    out[i] = transform(value) ^ i * step + seed & 255;
-  }
+  };
+  ark(Nr);
+  for (let r = Nr - 1; r >= 1; r--) { isr(); isb(); ark(r); imc(); }
+  isr(); isb(); ark(0);
+  const out = new Uint8Array(16);
+  for (let i = 0; i < 16; i++) out[i] = s[i % 4][(i / 4) | 0];
   return out;
 }
 
-async function runWasmEngine(wasmBytes, frag1, kf2, tokenBytes, seedInt) {
-  if (typeof WebAssembly !== "undefined" && WebAssembly.instantiate) {
-    try {
-      const { instance } = await WebAssembly.instantiate(wasmBytes);
-      const { _s, _r, memory } = instance.exports;
-      const h = new Uint8Array(memory.buffer);
-      const len = frag1.length;
-      const [y, v, T, out] = [1000, 1000 + len, 1000 + 2 * len, 1000 + 3 * len];
-      h.set(frag1, y);
-      h.set(kf2, v);
-      h.set(tokenBytes, T);
-      _s(seedInt);
-      _r(y, v, T, out, len);
-      return h.slice(out, out + len);
-    } catch (_) {}
+function aesCbcDecrypt(key, iv, ct, keepPadding) {
+  const w = _aesExpandKey(key);
+  const out = new Uint8Array(ct.length);
+  let prev = iv;
+  for (let o = 0; o < ct.length; o += 16) {
+    const blk = ct.slice(o, o + 16);
+    const dec = _aesInvCipher(blk, w);
+    for (let i = 0; i < 16; i++) out[o + i] = dec[i] ^ prev[i];
+    prev = blk;
   }
-  try {
-    return runWasmPureJs(wasmBytes, frag1, kf2, tokenBytes, seedInt);
-  } catch (_) {
-    const len = frag1.length;
-    const out = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      out[i] = (frag1[i] ^ kf2[i] ^ tokenBytes[i]) & 0xff;
-    }
-    return out;
-  }
+  if (keepPadding) return out;
+  const pad = out[out.length - 1];
+  return out.slice(0, out.length - (pad > 0 && pad <= 16 ? pad : 0));
 }
 
-function extractSsrObj(html) {
-  const match = html.match(/\{type:"data",data:(\{)/);
-  if (!match) throw new Error("SSR data block not found in embed HTML");
-  let depth = 0;
-  const start = html.indexOf("{", match.index + match[0].length - 1);
-  for (let i = start; i < html.length; i++) {
-    if (html[i] === "{") depth++;
-    else if (html[i] === "}" && --depth === 0) return html.slice(start, i + 1);
+// ── Encoding helpers ──────────────────────────────────────────────────────────
+function utf8(str) {
+  const bytes = [];
+  for (let i = 0; i < str.length; i++) {
+    let c = str.charCodeAt(i);
+    if (c < 0x80) bytes.push(c);
+    else if (c < 0x800) bytes.push(0xc0 | (c >> 6), 0x80 | (c & 0x3f));
+    else if (c >= 0xd800 && c <= 0xdbff) {
+      const c2 = str.charCodeAt(++i);
+      c = 0x10000 + ((c & 0x3ff) << 10) + (c2 & 0x3ff);
+      bytes.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 0x3f), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
+    } else bytes.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
   }
-  throw new Error("SSR brace matching failed");
+  return new Uint8Array(bytes);
 }
 
-function parseJsLiteral(source) {
-  let index = 0;
-  function whitespace() {
-    while (index < source.length && /\s/.test(source[index])) index++;
-  }
-  function doubleString() {
-    let out = "";
-    index++;
-    while (index < source.length && source[index] !== '"') {
-      if (source[index] === "\\") {
-        index++;
-        out += { n: "\n", t: "\t", r: "\r", '"': '"', "\\": "\\" }[source[index]] ?? source[index];
-        index++;
-      } else out += source[index++];
+function utf8Decode(bytes) {
+  let s = "";
+  for (let i = 0; i < bytes.length;) {
+    const c = bytes[i++];
+    if (c < 0x80) s += String.fromCharCode(c);
+    else if (c < 0xe0) s += String.fromCharCode(((c & 0x1f) << 6) | (bytes[i++] & 0x3f));
+    else if (c < 0xf0) s += String.fromCharCode(((c & 0x0f) << 12) | ((bytes[i++] & 0x3f) << 6) | (bytes[i++] & 0x3f));
+    else {
+      const cp = ((c & 0x07) << 18) | ((bytes[i++] & 0x3f) << 12) | ((bytes[i++] & 0x3f) << 6) | (bytes[i++] & 0x3f);
+      const u = cp - 0x10000;
+      s += String.fromCharCode(0xd800 + (u >> 10), 0xdc00 + (u & 0x3ff));
     }
-    index++;
-    return out;
   }
-  function singleString() {
-    let out = "";
-    index++;
-    while (index < source.length && source[index] !== "'") {
-      if (source[index] === "\\") {
-        index++;
-        out += source[index] === "'" ? "'" : { n: "\n", t: "\t", r: "\r", "\\": "\\" }[source[index]] ?? source[index];
-        index++;
-      } else out += source[index++];
-    }
-    index++;
-    return out;
+  return s;
+}
+
+const _B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+function bytesToB64(bytes) {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 3) {
+    const b0 = bytes[i], b1 = i + 1 < bytes.length ? bytes[i + 1] : 0, b2 = i + 2 < bytes.length ? bytes[i + 2] : 0;
+    s += _B64[b0 >> 2];
+    s += _B64[((b0 & 3) << 4) | (b1 >> 4)];
+    s += i + 1 < bytes.length ? _B64[((b1 & 15) << 2) | (b2 >> 6)] : "=";
+    s += i + 2 < bytes.length ? _B64[b2 & 63] : "=";
   }
-  function key() {
-    whitespace();
-    if (source[index] === '"') return doubleString();
-    if (source[index] === "'") return singleString();
-    const match = source.slice(index).match(/^[a-zA-Z_$][a-zA-Z0-9_$]*/);
-    if (!match) throw new Error(`Bad key at pos ${index}`);
-    index += match[0].length;
-    return match[0];
+  return s;
+}
+function b64ToBytes(str) {
+  str = str.replace(/[^A-Za-z0-9+/=]/g, "");
+  const out = [];
+  let buf = 0, bits = 0;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    if (ch === "=") break;
+    const v = _B64.indexOf(ch);
+    if (v < 0) continue;
+    buf = (buf << 6) | v;
+    bits += 6;
+    if (bits >= 8) { bits -= 8; out.push((buf >> bits) & 0xff); }
   }
-  function object() {
-    const out = {};
-    index++;
-    whitespace();
-    while (index < source.length && source[index] !== "}") {
-      if (source[index] === ",") {
-        index++;
-        whitespace();
-        continue;
+  return new Uint8Array(out);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Minimal WASM interpreter
+//
+//  flixcloud ships a tiny (~400-byte) WebAssembly module ("w_payload") with each
+//  embed and randomizes its constants per request, so the cipher table can't be
+//  hardcoded.  This interpreter executes the module's exported _s / _r functions
+//  directly.  Validated against the native WebAssembly engine over many random
+//  payloads + inputs.
+// ════════════════════════════════════════════════════════════════════════════
+
+function wasmModule(bytes) {
+  const u8 = bytes;
+  let pos = 0;
+  const leb = () => { let r = 0, s = 0, b; do { b = u8[pos++]; r |= (b & 0x7f) << s; s += 7; } while (b & 0x80); return r >>> 0; };
+  const sleb = () => { let r = 0, s = 0, b; do { b = u8[pos++]; r |= (b & 0x7f) << s; s += 7; } while (b & 0x80); if (s < 32 && (b & 0x40)) r |= (-1 << s); return r | 0; };
+
+  const types = [], funcs = [], exports = {}, code = [], data = [];
+  let mem = { min: 1 };
+  pos = 8; // skip magic + version
+  while (pos < u8.length) {
+    const id = u8[pos++], size = leb(), secEnd = pos + size;
+    if (id === 1) {
+      const n = leb();
+      for (let i = 0; i < n; i++) {
+        pos++; // 0x60
+        const np = leb(); const params = [];
+        for (let j = 0; j < np; j++) params.push(u8[pos++]);
+        const nr = leb(); const res = [];
+        for (let j = 0; j < nr; j++) res.push(u8[pos++]);
+        types.push({ params, res });
       }
-      const property = key();
-      whitespace();
-      index++;
-      out[property] = value();
-      whitespace();
-    }
-    index++;
-    return out;
-  }
-  function array() {
-    const out = [];
-    index++;
-    whitespace();
-    while (index < source.length && source[index] !== "]") {
-      if (source[index] === ",") {
-        index++;
-        whitespace();
-        continue;
+    } else if (id === 3) {
+      const n = leb();
+      for (let i = 0; i < n; i++) funcs.push(leb());
+    } else if (id === 5) {
+      const n = leb();
+      for (let i = 0; i < n; i++) { const fl = u8[pos++]; const mn = leb(); let mx = null; if (fl) mx = leb(); mem = { min: mn, max: mx }; }
+    } else if (id === 6) {
+      const n = leb();
+      for (let i = 0; i < n; i++) { pos++; pos++; const op = u8[pos++]; if (op === 0x41) sleb(); pos++; }
+    } else if (id === 7) {
+      const n = leb();
+      for (let i = 0; i < n; i++) {
+        const nl = leb(); let nm = "";
+        for (let j = 0; j < nl; j++) nm += String.fromCharCode(u8[pos++]);
+        const kind = u8[pos++], idx = leb();
+        exports[nm] = { kind, idx };
       }
-      out.push(value());
-      whitespace();
+    } else if (id === 10) {
+      const n = leb();
+      for (let i = 0; i < n; i++) {
+        const cs = leb(), cend = pos + cs;
+        const nl = leb(); let lc = 0;
+        for (let j = 0; j < nl; j++) { const cnt = leb(); u8[pos++]; lc += cnt; }
+        code.push({ localsCount: lc, bodyStart: pos, bodyEnd: cend });
+        pos = cend;
+      }
+    } else if (id === 11) {
+      const n = leb();
+      for (let i = 0; i < n; i++) {
+        leb(); // flag
+        let off = 0; const op = u8[pos++]; if (op === 0x41) off = sleb(); pos++;
+        const dl = leb(); const bb = u8.slice(pos, pos + dl); pos += dl;
+        data.push({ off, bytes: bb });
+      }
     }
-    index++;
-    return out;
+    pos = secEnd;
   }
-  function value() {
-    whitespace();
-    if (source[index] === "{") return object();
-    if (source[index] === "[") return array();
-    if (source[index] === '"') return doubleString();
-    if (source[index] === "'") return singleString();
-    if (source.startsWith("true", index)) { index += 4; return true; }
-    if (source.startsWith("false", index)) { index += 5; return false; }
-    if (source.startsWith("null", index)) { index += 4; return null; }
-    if (source.startsWith("undefined", index)) { index += 9; return null; }
-    if (source.startsWith("!0", index)) { index += 2; return true; }
-    if (source.startsWith("!1", index)) { index += 2; return false; }
-    const match = source.slice(index).match(/^-?[\d.]+([eE][+-]?\d+)?/);
-    if (match) {
-      index += match[0].length;
-      return parseFloat(match[0]);
+
+  const globals = [0];
+  const M = new Uint8Array(Math.max(mem.min, 1) * 65536);
+  data.forEach((d) => M.set(d.bytes, d.off));
+
+  // advance past one instruction (immediates included)
+  const skip = (p) => {
+    const op = u8[p++];
+    if (op === 0x02 || op === 0x03 || op === 0x04) return p + 1; // blocktype byte
+    if (op === 0x0c || op === 0x0d || op === 0x10 || (op >= 0x20 && op <= 0x24)) { const sv = pos; pos = p; leb(); const np = pos; pos = sv; return np; }
+    if (op === 0x41) { const sv = pos; pos = p; sleb(); const np = pos; pos = sv; return np; }
+    if (op >= 0x28 && op <= 0x3e) { const sv = pos; pos = p; leb(); leb(); const np = pos; pos = sv; return np; }
+    return p;
+  };
+  const matchEnd = (p) => {
+    let depth = 0, q = p;
+    while (q < u8.length) {
+      const op = u8[q];
+      if (op === 0x02 || op === 0x03 || op === 0x04) depth++;
+      else if (op === 0x0b) { if (depth === 0) return q; depth--; }
+      q = skip(q);
     }
-    throw new Error(`JS parse error at pos ${index}`);
+    return u8.length;
+  };
+
+  function run(fidx, args) {
+    const fn = code[fidx], ty = types[funcs[fidx]];
+    const np = ty.params.length;
+    const loc = new Int32Array(np + fn.localsCount);
+    for (let i = 0; i < np; i++) loc[i] = args[i] | 0;
+    const st = [], ctrl = [];
+    let ip = fn.bodyStart;
+    const END = fn.bodyEnd;
+    const rdLeb = () => { let r = 0, s = 0, b; do { b = u8[ip++]; r |= (b & 0x7f) << s; s += 7; } while (b & 0x80); return r >>> 0; };
+    const rdSleb = () => { let r = 0, s = 0, b; do { b = u8[ip++]; r |= (b & 0x7f) << s; s += 7; } while (b & 0x80); if (s < 32 && (b & 0x40)) r |= (-1 << s); return r | 0; };
+    const branch = (k) => {
+      const idx = ctrl.length - 1 - k, f = ctrl[idx];
+      if (f.kind === 3) { ctrl.length = idx + 1; ip = f.start; }  // loop → jump to start
+      else { ctrl.length = idx; ip = f.end + 1; }                  // block → jump past end
+    };
+    while (ip < END) {
+      const op = u8[ip++];
+      if (op === 0x02) { ip++; ctrl.push({ kind: 2, end: matchEnd(ip) }); }
+      else if (op === 0x03) { ip++; ctrl.push({ kind: 3, start: ip, end: matchEnd(ip) }); }
+      else if (op === 0x0b) { if (ctrl.length === 0) break; ctrl.pop(); }
+      else if (op === 0x0c) { branch(rdLeb()); }
+      else if (op === 0x0d) { const k = rdLeb(); if (st.pop()) branch(k); }
+      else if (op === 0x0f) { break; }
+      else if (op === 0x20) { st.push(loc[rdLeb()]); }
+      else if (op === 0x21) { loc[rdLeb()] = st.pop(); }
+      else if (op === 0x22) { loc[rdLeb()] = st[st.length - 1]; }
+      else if (op === 0x23) { st.push(globals[rdLeb()]); }
+      else if (op === 0x24) { globals[rdLeb()] = st.pop(); }
+      else if (op === 0x41) { st.push(rdSleb()); }
+      else if (op === 0x2d) { rdLeb(); const off = rdLeb(); const a = st.pop(); st.push(M[(a >>> 0) + off]); }
+      else if (op === 0x3a) { rdLeb(); const off = rdLeb(); const v = st.pop(); const a = st.pop(); M[(a >>> 0) + off] = v & 0xff; }
+      else if (op === 0x6a) { const b = st.pop(), a = st.pop(); st.push((a + b) | 0); }
+      else if (op === 0x6b) { const b = st.pop(), a = st.pop(); st.push((a - b) | 0); }
+      else if (op === 0x6c) { const b = st.pop(), a = st.pop(); st.push(Math.imul(a, b)); }
+      else if (op === 0x71) { const b = st.pop(), a = st.pop(); st.push(a & b); }
+      else if (op === 0x72) { const b = st.pop(), a = st.pop(); st.push(a | b); }
+      else if (op === 0x73) { const b = st.pop(), a = st.pop(); st.push(a ^ b); }
+      else if (op === 0x74) { const b = st.pop(), a = st.pop(); st.push((a << (b & 31)) | 0); }
+      else if (op === 0x76) { const b = st.pop(), a = st.pop(); st.push((a >>> (b & 31)) | 0); }
+      else if (op === 0x75) { const b = st.pop(), a = st.pop(); st.push((a >> (b & 31)) | 0); }
+      else if (op === 0x4f) { const b = st.pop(), a = st.pop(); st.push((a >>> 0) >= (b >>> 0) ? 1 : 0); }
+      else if (op === 0x49) { const b = st.pop(), a = st.pop(); st.push((a >>> 0) < (b >>> 0) ? 1 : 0); }
+      else if (op === 0x48) { const b = st.pop(), a = st.pop(); st.push((a | 0) < (b | 0) ? 1 : 0); }
+      else if (op === 0x46) { const b = st.pop(), a = st.pop(); st.push(a === b ? 1 : 0); }
+      else if (op === 0x45) { const a = st.pop(); st.push(a === 0 ? 1 : 0); }
+      else throw new Error("unsupported wasm opcode 0x" + op.toString(16));
+    }
+    return st.pop();
   }
-  return value();
+
+  return {
+    memory: M,
+    call: (name, args) => run(exports[name].idx, args),
+  };
 }
 
-function extractSsrData(html) {
-  const objStr = extractSsrObj(html);
-  try {
-    return eval("(" + objStr + ")");
-  } catch (_) {
-    return parseJsLiteral(objStr);
-  }
-}
+// ════════════════════════════════════════════════════════════════════════════
+//  Extension
+// ════════════════════════════════════════════════════════════════════════════
+
+const PAGE_SIZE = 30;
+const EMBED_HOST = "https://flixcloud.cc";
+
+// The site itself offers two servers per episode, HD-1 and HD-2 (see
+// getVideoList) — but both point at the exact same video_id, just fetched
+// through a different flixcloud gateway (fetch8 vs fetch9), so they are
+// mirrors of one another rather than different encodes.  HD-1 is the default;
+// HD-2 is only resolved if the viewer ticks it on too, as a backup.
+//
+// Independently of that, the segment *files* themselves are handed out on a
+// mix of CDN mirrors (currently *.rundowncdn.top and *.atomic4cdn.top), which
+// serve byte-identical files at the same path but do NOT behave the same for
+// every player: atomic4cdn fails its TLS handshake under mbedtls
+// ("mbedtls_ssl_handshake returned -0x3e80"), which is the TLS library in the
+// iOS player — every segment then fails to open and the app jumps to the next
+// episode.  rundowncdn works everywhere tested (desktop and the iOS-equivalent
+// mpv/mbedtls stack), so every segment is pinned to one fixed rundowncdn vault
+// regardless of which mirror the playlist itself names.  This is an
+// implementation detail, not something worth exposing as a "server" — it was
+// briefly a picker of its own (v0.4.0) and just confused viewers who don't
+// recognise CDN vault names as playback quality.
+const SEGMENT_HOST = "vault-93.rundowncdn.top";
+
+// The CDN wraps a segment requested with a fake image extension: a fake header
+// (8 bytes for .png) and the MPEG-TS XORed with this fixed 16-byte key.
+const SEGMENT_WRAP_KEY = [
+  0x9d, 0x2a, 0xf1, 0x47, 0xb3, 0x8e, 0x5c, 0x70, 0xa6, 0x19, 0xe4, 0x3b, 0xd8, 0x62, 0x0f, 0xc5,
+];
+
+// See toEdl().  The lead is how far before a segment's first timestamp the seek
+// is aimed; the fallback is the first timestamp assumed when it cannot be read
+// (both renditions of the streams checked start at 1.4 s + a frame or two).
+const EDL_PTS_LEAD = 0.05;
+const EDL_PTS_FALLBACK = 1.4;
+
+// The "latest aired" feed paginates by opaque cursor, while Mangayomi requests
+// pages by number.  Mangayomi asks for pages sequentially as the user scrolls,
+// so we remember the cursor that fetches each page.  page -> cursor ("" / null
+// means "no cursor", i.e. the first page).
+var _latestAiredCursors = {};
+
+// getVideoList is called for both playback and download of the same episode;
+// cache results briefly to avoid re-running the whole resolve/decrypt pipeline.
+var _vlCache = {};
+var _vlCacheTs = {};
+var VL_CACHE_TTL_MS = 5 * 60 * 1000;
 
 class DefaultExtension extends MProvider {
   constructor() {
     super();
-    this.baseUrl = "https://reanime.to";
-    this.userAgent = "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36";
-    this._client = new Client({
-      persistentConnection: true,
-      noProxy: true,
-      timeout: 15,
-      connectTimeout: 10
-    });
-
-    this.prefTitleLanguage = "reanime_title_language_v1";
-    this.prefServerOrder = "reanime_server_order_v1";
-    this.prefWorkerUrl = "reanime_worker_url_v1";
+    this.client = new Client();
   }
 
-  _text(v) {
-    return (v !== null && v !== undefined) ? String(v) : "";
+  getPreference(key) {
+    return new SharedPreferences().get(key);
   }
 
-  _preference(key, defaultValue) {
-    try {
-      const sp = new SharedPreferences();
-      const val = sp.getString(key, defaultValue);
-      return val ? String(val) : defaultValue;
-    } catch (_) {
-      return defaultValue;
-    }
+  get supportsLatest() {
+    return true;
   }
 
-  _pickTitle(titleObj, titleStr, fallback) {
-    const langPref = this._preference(this.prefTitleLanguage, "english").toLowerCase();
-    if (titleObj && typeof titleObj === "object") {
-      const eng = this._text(titleObj.english).trim();
-      const rom = this._text(titleObj.romaji).trim();
-      const nat = this._text(titleObj.native || titleObj.japanese).trim();
-
-      if (langPref === "native" && nat) return nat;
-      if (langPref === "romaji" && rom) return rom;
-      if (eng) return eng;
-      if (rom) return rom;
-      if (nat) return nat;
-    }
-    const t = this._text(titleStr).trim();
-    if (t) return t;
-    return this._text(fallback).trim();
+  get ua() {
+    // Kept in step with the sec-ch-ua version advertised in cdnHeaders.
+    return "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
   }
 
-  async _request(url, referer, json = true) {
-    const headers = {
-      "User-Agent": this.userAgent,
-      "Referer": referer || (this.baseUrl + "/"),
-      "Accept": json ? "application/json, text/plain, */*" : "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      "Accept-Language": "en-US,en;q=0.9"
+  getBaseUrl() {
+    return (this.getPreference("reanime_base_url") || this.source.baseUrl).replace(/\/$/, "");
+  }
+
+  get apiUrl() {
+    // The API used to live on api.reanime.to; it is now same-origin with the
+    // site, so this normally just tracks the base URL.
+    return (this.source.apiUrl || this.getBaseUrl()).replace(/\/$/, "");
+  }
+
+  // Headers for the reanime.cz /api/v1 routes (no Cloudflare challenge, no auth).
+  get apiHeaders() {
+    return {
+      "User-Agent": this.ua,
+      "Accept": "application/json",
+      "Origin": this.getBaseUrl(),
+      "Referer": this.getBaseUrl() + "/",
     };
-    const res = await this._client.get(url, headers);
-    if (!res || res.statusCode < 200 || res.statusCode >= 300) {
-      throw new Error(`HTTP ${res ? res.statusCode : "ERR"} requesting ${url}`);
-    }
-    return res.body || "";
   }
 
-  _extractSlug(url) {
-    if (!url) return "";
-    const clean = url.split("?")[0].split("#")[0].trim();
-    const m = clean.match(/(?:\/anime\/|\/watch\/)([^/?#]+)/i);
-    if (m) return m[1];
-    const parts = clean.split("/").filter(Boolean);
-    return parts[parts.length - 1] || "";
+  // Headers for the flixcloud.cc embed page + token endpoint (validates the
+  // referring site domain).
+  get embedHeaders() {
+    return {
+      "User-Agent": this.ua,
+      "Referer": this.getBaseUrl() + "/",
+    };
   }
 
-  _findRefTable(jsonObj) {
-    if (!jsonObj || typeof jsonObj !== "object") return null;
-    const nodes = Array.isArray(jsonObj.nodes) ? jsonObj.nodes : [];
-    for (const node of nodes) {
-      if (!node || typeof node !== "object") continue;
-      const data = node.data;
-      if (Array.isArray(data) && data.length > 50) {
-        return new SvelteKitRefTable(data);
-      }
-    }
-    return null;
+  // Headers for the CDN hosts.  These are fronted by Cloudflare bot management
+  // and hotlink-check against the *player's* origin (flixcloud.cc), not the
+  // site.  The segment hosts in particular reject anything that does not look
+  // like a browser XHR: the full client-hint + Sec-Fetch + Accept-Encoding set
+  // is required, and dropping any of those groups turns a 200 into a 403.
+  // (TLS fingerprint is not a factor — a stock client with these headers is
+  // accepted; see memory/reanime-extension.md.)
+  get cdnHeaders() {
+    return {
+      "User-Agent": this.ua,
+      "Accept": "*/*",
+      "Accept-Language": "en-US,en;q=0.9",
+      // Must be present — omitting it is an instant 403 — but ask for no
+      // compression: the CDN will otherwise gzip some .ts segments, and a
+      // player whose HTTP stack does not transparently inflate would be handed
+      // a gzip stream instead of MPEG-TS.  "identity" passes the WAF too.
+      "Accept-Encoding": "identity",
+      "Origin": EMBED_HOST,
+      "Referer": EMBED_HOST + "/",
+      "Sec-Fetch-Site": "cross-site",
+      "Sec-Fetch-Mode": "cors",
+      "Sec-Fetch-Dest": "empty",
+      "sec-ch-ua": '"Chromium";v="135", "Not-A.Brand";v="8"',
+      "sec-ch-ua-mobile": "?0",
+      "sec-ch-ua-platform": '"Windows"',
+    };
   }
 
-  _parseAnimeCollection(jsonStr) {
-    let data;
-    try {
-      data = JSON.parse(jsonStr);
-    } catch (_) {
-      return [];
-    }
+  async getJSON(url, headers) {
+    const res = await this.client.get(url, headers || this.apiHeaders);
+    if (res.statusCode !== 200 || !res.body) throw new Error("HTTP " + res.statusCode + " for " + url);
+    return JSON.parse(res.body);
+  }
 
-    const items = [];
-    if (Array.isArray(data)) {
-      items.push(...data);
-    } else if (data && typeof data === "object") {
-      const candidates = ["results", "data", "anime", "animes", "items", "latest_aired", "top_weekly"];
-      for (const k of candidates) {
-        if (Array.isArray(data[k]) && data[k].length) {
-          items.push(...data[k]);
-          break;
-        }
-      }
-    }
+  // ── Listing helpers ──────────────────────────────────────────────────────
 
-    const result = [];
-    const seen = Object.create(null);
+  titleByPref(title) {
+    if (!title) return "";
+    const pref = this.getPreference("reanime_title_lang") || "english";
+    if (pref === "romaji") return title.romaji || title.english || title.user_preferred || title.native || "";
+    if (pref === "native") return title.native || title.romaji || title.english || "";
+    return title.english || title.romaji || title.user_preferred || title.native || "";
+  }
 
-    for (const raw of items) {
-      if (!raw || typeof raw !== "object") continue;
-      const item = raw.anime && typeof raw.anime === "object" ? raw.anime : raw;
+  posterOf(item) {
+    const c = item.cover_image || {};
+    return c.large || c.extra_large || c.medium || "";
+  }
 
-      const slug = this._text(item.anime_id || item.slug || item.url_slug || raw.anime_id || raw.slug).trim();
-      const anilistId = parseInt(item.anilist_id || item.anilistId || raw.anilist_id || 0, 10) || 0;
-      const titleObj = (item.title && typeof item.title === "object") ? item.title : (raw.title && typeof raw.title === "object" ? raw.title : null);
-      const title = this._pickTitle(titleObj, item.name || item.title || raw.title, slug || "Untitled");
+  mapResults(list) {
+    const self = this;
+    const out = [];
+    (list || []).forEach(function (m) {
+      if (!m || !m.anime_id) return;
+      const name = self.titleByPref(m.title);
+      if (!name) return;
+      out.push({ name: name, link: m.anime_id, imageUrl: self.posterOf(m) });
+    });
+    return out;
+  }
 
-      if (!slug && !anilistId) continue;
-      const link = slug ? `/anime/${slug}` : `/anime/${anilistId}`;
-      if (seen[link]) continue;
-      seen[link] = true;
-
-      const coverObj = item.cover_image || item.poster || raw.cover_image;
-      let imageUrl = "";
-      if (coverObj && typeof coverObj === "object") {
-        imageUrl = this._text(coverObj.extra_large || coverObj.large || coverObj.medium || coverObj.url).trim();
-      } else if (typeof coverObj === "string") {
-        imageUrl = coverObj.trim();
-      }
-
-      result.push({
-        name: title,
-        link: link,
-        imageUrl: imageUrl
-      });
-    }
-
-    return result;
+  async searchAPI(extraQuery, page) {
+    const offset = (page - 1) * PAGE_SIZE;
+    const url = this.apiUrl + "/api/v1/search?q=&limit=" + PAGE_SIZE + "&offset=" + offset + extraQuery;
+    const data = await this.getJSON(url);
+    const list = this.mapResults(data.results);
+    const total = data.total || 0;
+    return { list: list, hasNextPage: offset + PAGE_SIZE < total };
   }
 
   async getPopular(page) {
-    const limit = 36;
-    const offset = (Math.max(1, page) - 1) * limit;
-    const url = `${this.baseUrl}/api/v1/search?limit=${limit}&offset=${offset}`;
-    const json = await this._request(url, `${this.baseUrl}/search`);
-    const list = this._parseAnimeCollection(json);
-    return {
-      list: list,
-      hasNextPage: list.length >= limit
-    };
+    // Empty query is ordered by popularity by default.
+    return await this.searchAPI("", page);
+  }
+
+  async fetchLatestAired(cursor) {
+    const url = this.apiUrl + "/api/v1/home/latest-aired?limit=" + PAGE_SIZE +
+      (cursor ? "&cursor=" + encodeURIComponent(cursor) : "");
+    return await this.getJSON(url);
   }
 
   async getLatestUpdates(page) {
-    return this.getPopular(page);
+    page = page || 1;
+    // Resolve the cursor for this page.  Normally page N's cursor was cached when
+    // page N-1 was fetched; for a cold deep-page request we walk forward from the
+    // deepest page we already know.
+    if (page > 1 && _latestAiredCursors[page] === undefined) {
+      let p = 1;
+      while (_latestAiredCursors[p + 1] !== undefined) p++;
+      for (; p < page; p++) {
+        const prev = await this.fetchLatestAired(p === 1 ? null : _latestAiredCursors[p]);
+        _latestAiredCursors[p + 1] = prev.has_more ? (prev.next_cursor || null) : null;
+        if (!prev.has_more) break;
+      }
+    }
+    if (page > 1 && !_latestAiredCursors[page]) return { list: [], hasNextPage: false };
+
+    const data = await this.fetchLatestAired(page === 1 ? null : _latestAiredCursors[page]);
+    _latestAiredCursors[page + 1] = data.has_more ? (data.next_cursor || null) : null;
+    return { list: this.mapResults(data.data), hasNextPage: !!data.has_more };
   }
 
   async search(query, page, filters) {
-    const limit = 36;
-    const offset = (Math.max(1, page) - 1) * limit;
-    const params = [`limit=${limit}`, `offset=${offset}`];
-
-    if (query && query.trim()) {
-      params.push(`q=${encodeURIComponent(query.trim())}`);
-    }
-
-    if (Array.isArray(filters)) {
-      for (const f of filters) {
-        if (!f || typeof f !== "object") continue;
-        const val = this._text(f.values ? f.values[f.state] : f.state).trim();
-        if (!val || val === "__unset__") continue;
-
-        if (f.type === "format") params.push(`format=${encodeURIComponent(val)}`);
-        else if (f.type === "status") params.push(`status=${encodeURIComponent(val)}`);
-        else if (f.type === "season") params.push(`season=${encodeURIComponent(val)}`);
-        else if (f.type === "year") params.push(`year=${encodeURIComponent(val)}`);
-        else if (f.type === "genre") params.push(`genre=${encodeURIComponent(val)}`);
+    try {
+      if (query && query.length > 0) {
+        const offset = (page - 1) * PAGE_SIZE;
+        const url = this.apiUrl + "/api/v1/search?q=" + encodeURIComponent(query) +
+          "&limit=" + PAGE_SIZE + "&offset=" + offset;
+        const data = await this.getJSON(url);
+        return { list: this.mapResults(data.results), hasNextPage: offset + PAGE_SIZE < (data.total || 0) };
       }
+      return await this.searchAPI(this.buildFilterQuery(filters), page);
+    } catch (e) {
+      return { list: [], hasNextPage: false };
     }
-
-    const url = `${this.baseUrl}/api/v1/search?${params.join("&")}`;
-    const json = await this._request(url, `${this.baseUrl}/search`);
-    const list = this._parseAnimeCollection(json);
-    return {
-      list: list,
-      hasNextPage: list.length >= limit
-    };
   }
 
-  _parseDetailFromRefTable(table, slug) {
-    const root = table.obj(0);
-    if (!root) return null;
-    const anime = table.objRef(root, "anime");
-    if (!anime) return null;
-
-    const titleRef = table.objRef(anime, "title");
-    const titleObj = titleRef ? {
-      english: table.stringRef(titleRef, "english"),
-      romaji: table.stringRef(titleRef, "romaji"),
-      native: table.stringRef(titleRef, "native") || table.stringRef(titleRef, "japanese")
-    } : null;
-    const title = this._pickTitle(
-      titleObj,
-      table.stringRef(anime, "title") || table.stringRef(anime, "english"),
-      slug
-    );
-
-    const coverObj = table.objRef(anime, "cover_image");
-    const poster = table.stringRef(coverObj, "extra_large") || table.stringRef(coverObj, "large") || table.stringRef(anime, "poster");
-
-    const description = table.stringRef(anime, "description")
-      .replace(/<br\s*\/?>/gi, "\n")
-      .replace(/<[^>]+>/g, "")
-      .trim();
-
-    const genres = table.stringArrayRef(anime, "genres");
-    const studios = table.objectArrayRef(anime, "studios").map((s) => table.stringRef(s, "name")).filter(Boolean);
-
-    const format = table.stringRef(anime, "format");
-    const status = table.stringRef(anime, "status");
-    const season = table.stringRef(anime, "season");
-    const year = table.intRef(anime, "season_year") || table.intRef(anime, "year");
-    const anilistId = table.intRef(anime, "anilist_id");
-    const malId = table.intRef(anime, "mal_id");
-    const episodesTotal = table.intRef(anime, "episodes_total");
-
-    const startDate = table.dateRef(anime, "start_date");
-    const endDate = table.dateRef(anime, "end_date");
-    const aired = (startDate && endDate) ? `${startDate} ~ ${endDate}` : (startDate || "");
-
-    const descLines = [];
-    if (description) descLines.push(description);
-    const metaInfo = [];
-    if (format) metaInfo.push(`Format: ${format}`);
-    if (status) metaInfo.push(`Status: ${status}`);
-    if (season || year) metaInfo.push(`Season: ${[season, year].filter(Boolean).join(" ")}`);
-    if (aired) metaInfo.push(`Aired: ${aired}`);
-    if (studios.length) metaInfo.push(`Studios: ${studios.join(", ")}`);
-    if (anilistId) metaInfo.push(`AniList ID: ${anilistId}`);
-    if (malId) metaInfo.push(`MAL ID: ${malId}`);
-    if (metaInfo.length) {
-      descLines.push("─────────────\n" + metaInfo.join("\n"));
-    }
-
-    return {
-      title,
-      poster,
-      description: descLines.join("\n\n"),
-      genres,
-      author: studios.join(", "),
-      status: status.includes("RELEASING") ? 0 : (status.includes("FINISHED") ? 1 : 0),
-      anilistId,
-      malId,
-      episodesTotal
-    };
-  }
-
-  _parseWatchEpisodesFromRefTable(table, slug, anilistId) {
-    const root = table.obj(0);
-    if (!root) return [];
-    const epRefs = table.arrayRef(root, "episodes");
-    const episodes = [];
-
-    for (const ref of epRefs) {
-      const item = (typeof ref === "number") ? table.obj(ref) : (ref && typeof ref === "object" ? ref : null);
-      if (!item) continue;
-      const num = table.intRef(item, "number") || table.intRef(item, "episode_number");
-      if (!num || num <= 0) continue;
-      const epTitle = table.stringRef(item, "title") || `Episode ${num}`;
-      const aired = table.stringRef(item, "aired");
-      const dateUpload = this._parseDateEpoch(aired);
-
-      episodes.push({
-        number: num,
-        name: epTitle.startsWith(`Episode ${num}`) ? epTitle : `${num}화 · ${epTitle}`,
-        url: `/watch/${slug}?ep=${num}${anilistId ? "&aid=" + anilistId : ""}`,
-        dateUpload: dateUpload
-      });
-    }
-
-    episodes.sort((a, b) => a.number - b.number);
-    return episodes;
-  }
-
-  _parseDetailFromHtml(html, slug) {
-    const titleMatch = html.match(/<h1[^>]*>([^<]+)<\/h1>/i) || html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
-    const title = titleMatch ? titleMatch[1].trim() : slug;
-
-    const posterMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i);
-    const poster = posterMatch ? posterMatch[1].trim() : "";
-
-    const descMatch = html.match(/description\s*:\s*"((?:\\.|[^"])*)"/);
-    const desc = descMatch ? descMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/<[^>]+>/g, "").trim() : "";
-
-    const anilistMatch = html.match(/anilist_id\s*:\s*(\d+)/i);
-    const anilistId = anilistMatch ? parseInt(anilistMatch[1], 10) : 0;
-
-    const statusMatch = html.match(/status\s*:\s*"([^"]+)"/i);
-    const statusStr = statusMatch ? statusMatch[1].toUpperCase() : "";
-
-    const genres = [];
-    const genreMatch = html.match(/genres\s*:\s*\[([^\]]*)\]/);
-    if (genreMatch) {
-      const gRegex = /"([^"]+)"/g;
-      let gm;
-      while ((gm = gRegex.exec(genreMatch[1])) !== null) {
-        genres.push(gm[1]);
+  buildFilterQuery(filters) {
+    let q = "";
+    if (!filters) return q;
+    try {
+      // 0: genres (group), 1: format, 2: status, 3: season, 4: year
+      const genres = [];
+      if (filters[0] && filters[0].state) {
+        for (const g of filters[0].state) if (g.state === true) genres.push(g.value);
       }
-    }
+      if (genres.length) q += "&genre=" + genres.map(encodeURIComponent).join(",");
 
-    const totalMatch = html.match(/episodes_total\s*:\s*(\d+)/i) || html.match(/total\s*:\s*(\d+)/i);
-    const episodesTotal = totalMatch ? parseInt(totalMatch[1], 10) : 0;
-
-    return {
-      title,
-      poster,
-      description: desc,
-      genres,
-      author: "",
-      status: statusStr.includes("RELEASING") ? 0 : (statusStr.includes("FINISHED") ? 1 : 0),
-      anilistId,
-      malId: 0,
-      episodesTotal
-    };
+      const sel = (f) => (f && f.values && f.values[f.state] ? f.values[f.state].value : "");
+      const fmt = sel(filters[1]); if (fmt) q += "&format=" + encodeURIComponent(fmt);
+      const st = sel(filters[2]); if (st) q += "&status=" + encodeURIComponent(st);
+      const se = sel(filters[3]); if (se) q += "&season=" + encodeURIComponent(se);
+      const yr = sel(filters[4]); if (/^\d{4}$/.test(yr)) q += "&year=" + yr;
+    } catch (e) { /* ignore malformed filter state */ }
+    return q;
   }
 
-  _parseEpisodesFromHtml(html, slug, anilistId) {
-    const episodes = [];
-    const payloadStart = html.indexOf("episodes:{data:[") >= 0 ? html.indexOf("episodes:{data:[") : html.indexOf("episodes: {data:[");
-    if (payloadStart >= 0) {
-      const dataStart = html.indexOf("[", payloadStart);
-      const dataEnd = html.indexOf("],limit:", dataStart) >= 0 ? html.indexOf("],limit:", dataStart) : html.indexOf("], limit:", dataStart);
-      if (dataStart >= 0 && dataEnd > dataStart) {
-        const payload = html.substring(dataStart + 1, dataEnd);
-        const epRegex = /episode_number\s*:\s*(\d+)[^}]*?title\s*:\s*"((?:\\.|[^"])*)"/g;
-        let em;
-        while ((em = epRegex.exec(payload)) !== null) {
-          const num = parseInt(em[1], 10);
-          const t = em[2].replace(/\\"/g, '"').trim() || `Episode ${num}`;
-          episodes.push({
-            number: num,
-            name: `${num}화 · ${t}`,
-            url: `/watch/${slug}?ep=${num}${anilistId ? "&aid=" + anilistId : ""}`,
-            dateUpload: ""
-          });
-        }
-      }
+  // ── Detail ───────────────────────────────────────────────────────────────
+
+  statusCode(s) {
+    switch ((s || "").toUpperCase()) {
+      case "RELEASING": return 0;
+      case "FINISHED": return 1;
+      case "NOT YET RELEASED": return 4;
+      case "CANCELLED": return 5;
+      default: return 5;
     }
-
-    if (!episodes.length) {
-      const linkRegex = /href=["']([^"']*\/watch\/[^"']*?ep=(\d+)[^"']*)["'][^>]*>([^<]*)</gi;
-      let lm;
-      const seen = Object.create(null);
-      while ((lm = linkRegex.exec(html)) !== null) {
-        const num = parseInt(lm[2], 10);
-        if (seen[num]) continue;
-        seen[num] = true;
-        const rawTitle = lm[3].trim() || `Episode ${num}`;
-        episodes.push({
-          number: num,
-          name: `${num}화 · ${rawTitle}`,
-          url: `/watch/${slug}?ep=${num}${anilistId ? "&aid=" + anilistId : ""}`,
-          dateUpload: ""
-        });
-      }
-    }
-
-    episodes.sort((a, b) => a.number - b.number);
-    return episodes;
-  }
-
-  _parseDateEpoch(v) {
-    if (!v) return "";
-    const m = this._text(v).match(/(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
-    if (!m) return "";
-    return String(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
   }
 
   async getDetail(url) {
-    const slug = this._extractSlug(url);
-    if (!slug) throw new Error("Invalid Re:Anime URL: missing slug");
+    const animeId = url.replace(/^.*\/anime\//, "").replace(/^\//, "");
+    const info = await this.getJSON(this.apiUrl + "/api/v1/anime/" + animeId);
 
-    let detail = null;
-    let episodes = [];
+    const name = this.titleByPref(info.title);
+    const cover = info.cover_image || {};
+    const imageUrl = cover.extra_large || cover.large || cover.medium || "";
+    const description = (info.description || "").replace(/<[^>]*>/g, "").replace(/\n{3,}/g, "\n\n").trim();
+    const genre = info.genres || [];
+    const status = this.statusCode(info.status);
+    const anilistId = info.anilist_id;
+    const isMovie = (info.format || "").toUpperCase() === "MOVIE";
+    // reanime has no per-episode thumbnails for ongoing/recent anime; fall back
+    // to the show's banner (then cover) so episodes aren't blank.
+    const thumbFallback = info.banner_image || imageUrl || cover.large || "";
 
-    try {
-      const dataUrl = `${this.baseUrl}/anime/${slug}/__data.json?x-appkit-invalidated=001`;
-      const dataJson = await this._request(dataUrl, `${this.baseUrl}/anime/${slug}`);
-      const parsed = JSON.parse(dataJson);
-      const table = this._findRefTable(parsed);
-      if (table) {
-        detail = this._parseDetailFromRefTable(table, slug);
-      }
-    } catch (_) {}
-
-    if (detail && detail.anilistId) {
-      try {
-        const watchDataUrl = `${this.baseUrl}/watch/${slug}/__data.json?x-appkit-invalidated=001`;
-        const watchJson = await this._request(watchDataUrl, `${this.baseUrl}/anime/${slug}`);
-        const parsedWatch = JSON.parse(watchJson);
-        const watchTable = this._findRefTable(parsedWatch);
-        if (watchTable) {
-          episodes = this._parseWatchEpisodesFromRefTable(watchTable, slug, detail.anilistId);
-        }
-      } catch (_) {}
-    }
-
-    if (!detail || !episodes.length) {
-      try {
-        const pageHtml = await this._request(`${this.baseUrl}/anime/${slug}`, `${this.baseUrl}/`, false);
-        if (!detail) {
-          detail = this._parseDetailFromHtml(pageHtml, slug);
-        }
-        if (!episodes.length) {
-          episodes = this._parseEpisodesFromHtml(pageHtml, slug, (detail && detail.anilistId) ? detail.anilistId : 0);
-        }
-      } catch (_) {}
-    }
-
-    if (!detail) {
-      throw new Error(`Unable to fetch detail for Re:Anime slug: ${slug}`);
-    }
-
-    const total = Math.max(detail.episodesTotal || 0, episodes.length);
-    if (total > 0 && episodes.length < total) {
-      const existing = new Set(episodes.map((e) => e.number));
-      for (let n = 1; n <= total; n++) {
-        if (!existing.has(n)) {
-          episodes.push({
-            number: n,
-            name: `Episode ${n}`,
-            url: `/watch/${slug}?ep=${n}${detail.anilistId ? "&aid=" + detail.anilistId : ""}`,
-            dateUpload: ""
-          });
-        }
-      }
-      episodes.sort((a, b) => a.number - b.number);
-    }
-
-    const episodeItems = episodes.map((ep) => ({
-      name: ep.name,
-      url: ep.url,
-      dateUpload: ep.dateUpload || ""
-    }));
-
-    return {
-      name: detail.title,
-      link: `/anime/${slug}`,
-      imageUrl: detail.poster,
-      description: detail.description,
-      author: detail.author || "",
-      status: detail.status,
-      genre: detail.genres || [],
-      episodes: episodeItems,
-      chapters: episodeItems
-    };
-  }
-
-  _decryptManifest(body, keyB64) {
-    const trimmed = String(body || "").trim();
-    if (trimmed.startsWith("#EXTM3U")) return trimmed;
-    if (!keyB64) return trimmed;
-    try {
-      const raw = atob(trimmed);
-      const key = atob(keyB64.trim());
-      let out = "";
-      for (let i = 0; i < raw.length; i++) {
-        out += String.fromCharCode(raw.charCodeAt(i) ^ key.charCodeAt(i % key.length));
-      }
-      if (out.trim().startsWith("#EXTM3U")) return out.trim();
-    } catch (_) {}
-    return trimmed;
-  }
-
-  _resolveUrl(rel, base) {
-    try {
-      const u = new URL(rel, base);
-      const qIdx = base.indexOf("?");
-      if (qIdx >= 0 && !u.search) {
-        u.search = base.substring(qIdx);
-      }
-      return u.href;
-    } catch (_) {
-      const b = base.substring(0, base.lastIndexOf("/") + 1);
-      const q = base.includes("?") ? base.substring(base.indexOf("?")) : "";
-      return b + rel + (rel.includes("?") ? "" : q);
-    }
-  }
-
-  _parseHlsVariants(masterM3u8, masterUrl, serverLabel, headers, subtitles, playlistKey) {
-    const lines = this._text(masterM3u8).replace(/^\uFEFF/, "").split(/\r?\n/);
-    const variants = [];
-    const audios = [];
-    const formattedSubs = (subtitles || []).map((s) => ({
-      file: s.url || s.file,
-      label: s.label || "Subtitle",
-      url: s.url || s.file
-    }));
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line.startsWith("#EXT-X-MEDIA:TYPE=AUDIO")) {
-        const uriMatch = line.match(/URI="([^"]+)"/i);
-        const nameMatch = line.match(/NAME="([^"]+)"/i);
-        if (uriMatch) {
-          const aUrl = /^https?:\/\//i.test(uriMatch[1]) ? uriMatch[1] : this._resolveUrl(uriMatch[1], masterUrl);
-          audios.push({
-            file: aUrl,
-            label: nameMatch ? nameMatch[1] : "Audio"
-          });
-        }
-        continue;
-      }
-      if (!line.startsWith("#EXT-X-STREAM-INF:")) continue;
-      let streamUrl = "";
-      for (let j = i + 1; j < lines.length; j++) {
-        const next = lines[j].trim();
-        if (next.startsWith("#EXT-X-STREAM-INF:")) break;
-        if (next && !next.startsWith("#")) {
-          streamUrl = next;
-          break;
-        }
-      }
-      if (!streamUrl) continue;
-
-      const resMatch = line.match(/RESOLUTION=\d+x(\d+)/i);
-      const nameMatch = line.match(/NAME="([^"]+)"/i);
-      const height = resMatch ? resMatch[1] : "";
-      const quality = height ? `${height}p` : (nameMatch ? nameMatch[1] : "Auto");
-
-      const fullUrl = /^https?:\/\//i.test(streamUrl) ? streamUrl : this._resolveUrl(streamUrl, masterUrl);
-
-      variants.push({
-        url: fullUrl,
-        originalUrl: fullUrl,
-        quality: `${serverLabel} · ${quality}`,
-        headers: playlistKey ? { ...headers, "X-Flix-Key": playlistKey } : headers,
-        subtitles: formattedSubs,
-        audios: audios
-      });
-    }
-    return { variants, audios };
-  }
-
-  _parseSubtitles(dataOrHtml) {
-    const subtitles = [];
-    const seen = Object.create(null);
-
-    if (dataOrHtml && typeof dataOrHtml === "object" && Array.isArray(dataOrHtml.subtitles)) {
-      for (const sub of dataOrHtml.subtitles) {
-        if (!sub || typeof sub !== "object") continue;
-        const u = this._text(sub.url || sub.file || sub.src).trim();
-        if (!u.startsWith("http") || seen[u]) continue;
-        seen[u] = true;
-        const label = this._text(sub.label || sub.language || sub.lang || "English").trim();
-        subtitles.push({
-          url: u,
-          label: label,
-          lang: label.toLowerCase()
-        });
-      }
-      return subtitles;
-    }
-
-    if (typeof dataOrHtml === "string") {
-      const subMatch = dataOrHtml.match(/subtitles:\s*(\[[^\]]*\])/s);
-      if (subMatch) {
-        const regex = /\{[^{}]*?url\s*:\s*["']([^"']+)["'][^{}]*?\}/g;
-        let m;
-        while ((m = regex.exec(subMatch[1])) !== null) {
-          const u = m[1].replace(/\\/g, "").trim();
-          if (!u.startsWith("http") || seen[u]) continue;
-          seen[u] = true;
-          const langMatch = m[0].match(/language\s*:\s*["']([^"']+)["']/i);
-          const label = langMatch ? langMatch[1].trim() : "Subtitle";
-          subtitles.push({
-            url: u,
-            label: label,
-            lang: label.toLowerCase()
-          });
-        }
-      }
-    }
-
-    return subtitles;
-  }
-
-  async _decryptFlixcloud(embedHtml, referer) {
-    const data = extractSsrData(embedHtml);
-    if (!data) throw new Error("FlixCloud SSR embed data missing");
-
-    const seed = data.obfuscation_seed;
-    const wasmB64 = data.w_payload;
-    if (!seed || !wasmB64) throw new Error("FlixCloud seed or WASM payload missing");
-
-    const fields = deriveFlixFields(seed);
-    const cryptoData = data.obfuscated_crypto_data;
-    if (!cryptoData) throw new Error("FlixCloud obfuscated crypto data missing");
-
-    const container = cryptoData[fields.containerName];
-    const array = container ? container[fields.arrayName] : null;
-    const obj = (array && array[0]) ? array[0][fields.objectName] : null;
-    if (!obj) throw new Error("FlixCloud crypto descriptor object missing");
-
-    const frag1 = b64toU8(obj[fields.keyField]);
-    const iv = b64toU8(obj[fields.ivField]);
-    const kf2 = b64toU8(data[fields.keyFrag2Field]);
-    const token = data[fields.tokenField];
-    if (!token) throw new Error("FlixCloud session token missing");
-
-    // Fetch token payload from /api/m3u8/{token}
-    const tokenUrl = `https://flixcloud.cc/api/m3u8/${encodeURIComponent(token)}`;
-    const tokenRes = await this._client.get(tokenUrl, {
-      "User-Agent": this.userAgent,
-      "Referer": referer || (this.baseUrl + "/"),
-      "Origin": "https://flixcloud.cc",
-      "Accept": "application/json, */*"
-    });
-
-    if (!tokenRes || tokenRes.statusCode < 200 || tokenRes.statusCode >= 300) {
-      throw new Error(`FlixCloud token request failed (HTTP ${tokenRes ? tokenRes.statusCode : "ERR"})`);
-    }
-
-    const tokenData = JSON.parse(tokenRes.body);
-    const vidKey = sha256Hex(token + "vid").substring(0, 10);
-    const keyKey = sha256Hex(token + "key").substring(0, 10);
-    const videoBytes = b64toU8(tokenData[vidKey]);
-    const tokenBytes = b64toU8(tokenData[keyKey]);
-
-    if (!videoBytes.length || !tokenBytes.length) {
-      throw new Error("FlixCloud token response missing required crypto fragments");
-    }
-
-    const seedInt = parseInt(seed.substring(0, 8), 16);
-    const wasmBytes = b64toU8(wasmB64);
-    const playlistKey = extractPlaylistKey(wasmBytes);
-
-    const wasmOut = await runWasmEngine(wasmBytes, frag1, kf2, tokenBytes, seedInt);
-
-    // PBKDF2(wasmOut, salt=seed, iterations=1000, 32 bytes)
-    const pbk = CryptoJS.PBKDF2(
-      u8toWordArray(wasmOut),
-      CryptoJS.enc.Utf8.parse(seed),
-      { keySize: 256 / 32, iterations: 1000, hasher: CryptoJS.algo.SHA256 }
-    );
-    const derivedBytes = wordArrayToU8(pbk);
-    for (let i = 0; i < 32; i++) {
-      derivedBytes[i] ^= seed.charCodeAt(i % seed.length);
-    }
-    const aesKey = CryptoJS.SHA256(u8toWordArray(derivedBytes));
-
-    // AES-256-CBC decrypt videoBytes
-    const decrypted = CryptoJS.AES.decrypt(
-      { ciphertext: u8toWordArray(videoBytes) },
-      aesKey,
-      {
-        iv: u8toWordArray(iv),
-        mode: CryptoJS.mode.CBC,
-        padding: CryptoJS.pad.Pkcs7
-      }
-    );
-
-    const streamUrl = decrypted.toString(CryptoJS.enc.Utf8).trim().replace(/\0+$/, "");
-    if (!streamUrl.startsWith("http")) {
-      throw new Error(`FlixCloud decrypted invalid stream URL: ${streamUrl.substring(0, 60)}`);
-    }
-
-    const subtitles = this._parseSubtitles(data);
-
-    return {
-      url: streamUrl,
-      playlistKey: playlistKey,
-      subtitles: subtitles
-    };
-  }
-
-  async _resolveCandidates(slug, anilistId, episodeNumber) {
-    const candidates = [];
-    const seenLinks = Object.create(null);
-
-    const addServer = (name, link, type) => {
-      const cleanLink = this._text(link).trim();
-      if (!cleanLink || seenLinks[cleanLink]) return;
-      seenLinks[cleanLink] = true;
-      candidates.push({
-        name: this._text(name || "Server").trim(),
-        link: cleanLink,
-        type: this._text(type || "sub").trim()
-      });
-    };
-
-    // 1. Try /api/flix/{anilistId}/{episodeNumber}
+    const chapters = [];
     if (anilistId) {
-      try {
-        const flixUrl = `${this.baseUrl}/api/flix/${anilistId}/${episodeNumber}`;
-        const json = await this._request(flixUrl, this.baseUrl + "/");
-        const root = JSON.parse(json);
-        const servers = Array.isArray(root.servers) ? root.servers : [];
-        for (const s of servers) {
-          if (s && typeof s === "object") {
-            addServer(s.serverName, s.dataLink, s.dataType);
-          }
-        }
-      } catch (_) {}
+      const episodes = await this.fetchAllEpisodes(animeId);
+      episodes.forEach((ep) => {
+        const num = ep.episode_number;
+        let title = ep.title || "";
+        if (!title || /^episode\s*\d+$/i.test(title)) title = "";
+        const chName = isMovie ? (title || name) : ("E" + num + (title ? " — " + title : ""));
+        const aired = ep.aired ? Date.parse(ep.aired) : NaN;
+        chapters.push({
+          name: chName,
+          // "<anilistId>|<epNumber>" — getVideoList resolves the stream from these.
+          url: anilistId + "|" + num,
+          dateUpload: isNaN(aired) ? null : "" + aired,
+          thumbnailUrl: ep.thumbnail || thumbFallback || null,
+          scanlator: this.episodeBadge(ep),
+          description: this.episodeDescription(ep),
+        });
+      });
+      chapters.reverse(); // newest first
     }
 
-    // 2. Try /api/watch/{slug}/{episodeNumber}
-    if (slug) {
-      try {
-        const watchUrl = `${this.baseUrl}/api/watch/${slug}/${episodeNumber}`;
-        const json = await this._request(watchUrl, this.baseUrl + "/");
-        const root = JSON.parse(json);
-        const links = Array.isArray(root.episode_links) ? root.episode_links : [];
-        for (const s of links) {
-          if (s && typeof s === "object") {
-            addServer(s.serverName, s.dataLink, s.dataType);
-          }
-        }
-      } catch (_) {}
-    }
-
-    // Order candidates: HD-2 first, then HD-1, then others
-    const orderPref = this._text(this._preference(this.prefServerOrder, "HD-2")).toUpperCase();
-    candidates.sort((a, b) => {
-      const aName = a.name.toUpperCase();
-      const bName = b.name.toUpperCase();
-      if (aName === orderPref) return -1;
-      if (bName === orderPref) return 1;
-      if (aName.includes("HD-2")) return -1;
-      if (bName.includes("HD-2")) return 1;
-      if (aName.includes("HD-1")) return -1;
-      if (bName.includes("HD-1")) return 1;
-      return 0;
-    });
-
-    return candidates;
+    return {
+      name: name,
+      imageUrl: imageUrl,
+      description: description,
+      genre: genre,
+      status: status,
+      link: this.getBaseUrl() + "/anime/" + animeId,
+      chapters: chapters,
+    };
   }
+
+  async fetchAllEpisodes(animeId) {
+    const all = [];
+    let offset = 0;
+    // The API hands back the whole list in one request (1,179 One Piece
+    // episodes in 0.27 s, against twelve sequential pages of 100); the loop
+    // still pages if it is ever capped.
+    const limit = 1000;
+    for (let guard = 0; guard < 100; guard++) {
+      const data = await this.getJSON(
+        this.apiUrl + "/api/v1/anime/" + animeId + "/episodes?limit=" + limit + "&offset=" + offset
+      );
+      const batch = data.data || [];
+      batch.forEach((e) => all.push(e));
+      const total = data.total || all.length;
+      offset += limit;
+      if (offset >= total || batch.length === 0) break;
+    }
+    return all;
+  }
+
+  // The line under an episode's title in the list: which audio it has, plus
+  // filler/recap.  The API flags each episode with subbed/dubbed, and they match
+  // what the streams offer (a sub-only episode lists only "sub" servers).  An
+  // episode carrying neither flag gets no audio label rather than a guess.
+  episodeBadge(ep) {
+    const hasSub = ep.subbed === true;
+    const hasDub = ep.dubbed === true;
+    let badge = hasSub && hasDub ? "Sub | Dub" : hasDub ? "Dub" : hasSub ? "Sub" : "";
+    if (ep.is_filler) badge += (badge ? " • " : "") + "Filler";
+    if (ep.is_recap) badge += (badge ? " • " : "") + "Recap";
+    return badge || null;
+  }
+
+  // reanime usually leaves episode synopses empty, so compose a useful info
+  // line from the metadata it does return (runtime, filler/recap). The
+  // Japanese/romaji alternate titles are intentionally left out.
+  episodeDescription(ep) {
+    const base = (ep.description || "").replace(/<[^>]*>/g, "").trim();
+    const parts = [];
+
+    const dur = ep.duration;
+    if (typeof dur === "number" && dur > 0) {
+      // reanime is inconsistent: usually minutes (23) but sometimes seconds
+      // (1438). Anything over ~3h is really seconds — normalise to minutes.
+      const mins = dur > 180 ? Math.round(dur / 60) : dur;
+      parts.push(mins + " min");
+    } else if (typeof dur === "string" && dur.trim()) {
+      parts.push(dur.trim());
+    }
+
+    if (ep.is_filler) parts.push("Filler");
+    if (ep.is_recap) parts.push("Recap");
+
+    const meta = parts.join("  ·  ");
+    if (base && meta) return base + "\n\n" + meta;
+    return base || meta || null;
+  }
+
+  // ── Video list ─────────────────────────────────────────────────────────────
 
   async getVideoList(url) {
-    const slug = this._extractSlug(url);
-    const epMatch = url.match(/[?&]ep=(\d+)/i);
-    const episodeNumber = epMatch ? parseInt(epMatch[1], 10) : 1;
+    const parts = url.split("|");
+    const anilistId = parts[0];
+    const epNum = parts[1];
+    if (!anilistId || !epNum) return [];
 
-    let anilistId = 0;
-    const aidMatch = url.match(/[?&]aid=(\d+)/i);
-    if (aidMatch) {
-      anilistId = parseInt(aidMatch[1], 10);
+    const audioPref = this.getPreference("reanime_audio_pref") || "sub_dub";
+    const serverKey = this.enabledServerIds().join(",");
+    const cacheKey = url + "|" + audioPref + "|" + serverKey;
+    const now = Date.now();
+    if (_vlCache[cacheKey] && now - (_vlCacheTs[cacheKey] || 0) < VL_CACHE_TTL_MS) {
+      return _vlCache[cacheKey];
     }
 
-    if (!anilistId && slug) {
-      const slugIdMatch = slug.match(/-(\d+)$/);
-      if (slugIdMatch) {
-        anilistId = parseInt(slugIdMatch[1], 10);
-      }
-      if (!anilistId) {
-        try {
-          const detail = await this.getDetail(`/anime/${slug}`);
-          if (detail && detail.description) {
-            const aidm = detail.description.match(/AniList ID:\s*(\d+)/i);
-            if (aidm) anilistId = parseInt(aidm[1], 10);
-          }
-        } catch (_) {}
-      }
-    }
-
-    const candidates = await this._resolveCandidates(slug, anilistId, episodeNumber);
-    if (!candidates.length) {
+    // The flix route is on the site host and is no longer behind a Cloudflare
+    // challenge — a plain request with a Referer is served normally.
+    const flixUrl = this.getBaseUrl() + "/api/flix/" + anilistId + "/" + epNum;
+    let flix;
+    try {
+      const res = await this.client.get(flixUrl, this.apiHeaders);
+      if (res.statusCode !== 200 || !res.body) return [];
+      flix = JSON.parse(res.body);
+    } catch (e) {
       return [];
     }
 
-    const videos = [];
-    const seenUrls = Object.create(null);
-    const errors = [];
+    // The site lists each server (HD-1, HD-2) twice — once tagged dataType
+    // "sub", once "dub" — but both rows carry the identical embed link, since
+    // one embed always carries both audio tracks; dedupe by link.  Keep only
+    // the servers the viewer ticked (see enabledServerIds), unless none of
+    // them are present on this episode, in which case fall back to whatever
+    // the site did offer rather than showing nothing.
+    const servers = (flix && flix.servers) || [];
+    const wanted = this.enabledServerIds();
+    const dedupe = (filterToWanted) => {
+      const seen = {};
+      const out = [];
+      servers.forEach((s) => {
+        const link = s.dataLink || "";
+        const id = (s.serverName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+        if (!link || seen[link] || !/\/e\//.test(link)) return;
+        if (filterToWanted && wanted.indexOf(id) < 0) return;
+        seen[link] = true;
+        out.push({ link: link, label: s.serverName || "HD" });
+      });
+      return out;
+    };
+    let embeds = dedupe(true);
+    if (embeds.length === 0) embeds = dedupe(false);
+    if (embeds.length === 0) return [];
 
-    for (const cand of candidates) {
-      const serverLabel = cand.name || "HD-2";
+    const streams = await this.getVideoListDirect(embeds, audioPref);
+    if (streams.length === 0) return [];
+
+    _vlCache[cacheKey] = streams;
+    _vlCacheTs[cacheKey] = Date.now();
+    return streams;
+  }
+
+  // Decrypt and build the stream client-side.  Ticked servers are resolved
+  // side by side (only HD-1 by default, so this is normally just one chain);
+  // each becomes its own quality entry labelled the way the site itself
+  // labels it ("HD-1", "HD-2").
+  async getVideoListDirect(embeds, audioPref) {
+    this._segKey = null;
+    const settled = await Promise.all(embeds.map(async (emb) => {
       try {
-        if (cand.link.includes("flixcloud.cc")) {
-          // --- FlixCloud Decryption Flow ---
-          const embedHtml = await this._request(cand.link, `${this.baseUrl}/`, false);
-          const decrypted = await this._decryptFlixcloud(embedHtml, `${this.baseUrl}/`);
-          const streamUrl = decrypted.url;
-          const subtitles = decrypted.subtitles || [];
-
-          const headers = {
-            "User-Agent": this.userAgent,
-            "Referer": "https://flixcloud.cc/",
-            "Origin": "https://flixcloud.cc",
-            "Accept": "*/*",
-            "X-Flix-Key": decrypted.playlistKey
-          };
-
-          const formattedSubs = (subtitles || []).map((s) => ({
-            file: s.url || s.file,
-            label: s.label || "Subtitle",
-            url: s.url || s.file
-          }));
-
-          const workerPref = (this._preference(this.prefWorkerUrl, "https://flix-proxy.wsun1023.workers.dev") || "").trim().replace(/\/+$/, "");
-          const wrapWorker = (rawUrl) => {
-            if (!workerPref || !workerPref.startsWith("http")) return rawUrl;
-            return `${workerPref}/?url=${encodeURIComponent(rawUrl)}&key=${encodeURIComponent(decrypted.playlistKey)}`;
-          };
-
-          let variantsParsed = false;
-          let parsedAudios = [];
-          try {
-            const masterContent = await this._request(streamUrl, "https://flixcloud.cc/", false);
-            const manifest = this._decryptManifest(masterContent, decrypted.playlistKey);
-            if (manifest.includes("#EXTM3U")) {
-              const { variants, audios } = this._parseHlsVariants(manifest, streamUrl, serverLabel, headers, subtitles, decrypted.playlistKey);
-              parsedAudios = audios;
-              for (const v of variants) {
-                const finalVUrl = wrapWorker(v.url);
-                if (!seenUrls[finalVUrl]) {
-                  seenUrls[finalVUrl] = true;
-                  videos.push({
-                    ...v,
-                    url: finalVUrl,
-                    originalUrl: v.url
-                  });
-                  variantsParsed = true;
-                }
-              }
-            }
-          } catch (_) {}
-
-          // Always prepend the Master playlist option (contains both video and audio tracks)
-          const finalMasterUrl = wrapWorker(streamUrl);
-          if (!seenUrls[finalMasterUrl]) {
-            seenUrls[finalMasterUrl] = true;
-            videos.unshift({
-              url: finalMasterUrl,
-              originalUrl: streamUrl,
-              quality: `${serverLabel} · Auto`,
-              headers: headers,
-              subtitles: formattedSubs,
-              audios: parsedAudios
-            });
-          }
-
-          // Once working streams are obtained, break to prevent exceeding QuickJS 5000ms CPU limit!
-          if (videos.length) {
-            break;
-          }
-        } else if (/\.(?:m3u8?|mp4|webm|mkv)(?:[?#]|$)/i.test(cand.link)) {
-          // --- Direct Media Link Flow ---
-          if (!seenUrls[cand.link]) {
-            seenUrls[cand.link] = true;
-            videos.push({
-              url: cand.link,
-              originalUrl: cand.link,
-              quality: `${serverLabel} · Direct`,
-              headers: {
-                "User-Agent": this.userAgent,
-                "Referer": `${this.baseUrl}/`,
-                "Accept": "*/*"
-              },
-              subtitles: []
-            });
-            break;
-          }
-        }
-      } catch (err) {
-        errors.push(`${serverLabel}: ${err.message || err}`);
+        return { emb: emb, r: await this.resolveEmbed(emb.link, audioPref) };
+      } catch (e) {
+        return { emb: emb, r: null };
       }
+    }));
+    const streams = [];
+    settled.forEach(({ emb, r }) => {
+      if (!r || !r.variants || r.variants.length === 0) return;
+      r.variants.forEach((vrt) => {
+        streams.push({
+          url: vrt.url,
+          originalUrl: vrt.url,
+          quality: emb.label,
+          // The player fetches the segments itself, so it needs the same
+          // browser-shaped header set the CDN demands (see cdnHeaders).
+          headers: this.cdnHeaders,
+          subtitles: r.subtitles,
+          audios: vrt.audios || [],
+        });
+      });
+    });
+    return streams;
+  }
+
+  // Resolve a flixcloud embed into one or more directly playable streams
+  // (edl:// URLs plus separate audio tracks) and subtitles.
+  // See memory/reanime-extension.md.
+  async resolveEmbed(embedUrl, audioPref) {
+    const pageRes = await this.client.get(embedUrl, this.embedHeaders);
+    if (pageRes.statusCode !== 200 || !pageRes.body) return null;
+    const html = pageRes.body;
+
+    const seed = this.matchOne(html, /obfuscation_seed:"([0-9a-f]+)"/);
+    const wPayload = this.matchOne(html, /w_payload:"([A-Za-z0-9+/=]+)"/);
+    const frag1B64 = this.matchOne(html, /kf_[0-9a-f]+:"([^"]+)"/);
+    const ivB64 = this.matchOne(html, /ivf_[0-9a-f]+:"([^"]+)"/);
+    if (!seed || !wPayload || !frag1B64 || !ivB64) return null;
+
+    // Field-name map derived from the seed (6 chained SHA-256 rounds).
+    let e = seed;
+    for (let i = 0; i < 3; i++) e = sha256Hex(e + i);
+    let s = e;
+    for (let i = 0; i < 3; i++) s = sha256Hex(s + i);
+    const keyFrag2Field = s.slice(0, 16) + "_" + s.slice(16, 24);
+    const tokenField = e.slice(48, 64) + "_" + e.slice(56, 64);
+
+    const keyFrag2B64 = this.matchOne(html, this.fieldRx(keyFrag2Field));
+    const token = this.matchOne(html, this.fieldRx(tokenField));
+    if (!keyFrag2B64 || !token) return null;
+
+    // The encrypted manifest + a key fragment arrive via a single-use, IP-bound
+    // token endpoint.
+    const tk = await this.getJSON(EMBED_HOST + "/api/m3u8/" + token, this.embedHeaders);
+    const vKey = sha256Hex(token + "vid").slice(0, 10);
+    const tKey = sha256Hex(token + "key").slice(0, 10);
+    const cipherB64 = tk[vKey];
+    const fragTB64 = tk[tKey];
+    if (!cipherB64 || !fragTB64) return null;
+
+    // WASM module: _r derives the manifest-URL key (E); _c derives the 32-byte
+    // key that XOR-decrypts the playlists themselves.
+    const wasm = wasmModule(b64ToBytes(wPayload));
+    const frag1 = b64ToBytes(frag1B64);
+    const keyFrag2 = b64ToBytes(keyFrag2B64);
+    const fragT = b64ToBytes(fragTB64);
+    const k = frag1.length;
+    const pA = 1000, pB = pA + k, pC = pB + k, pOut = pC + k;
+    wasm.memory.set(frag1, pA);
+    wasm.memory.set(keyFrag2, pB);
+    wasm.memory.set(fragT, pC);
+    wasm.call("_s", [parseInt(seed.slice(0, 8), 16) >>> 0]);
+    wasm.call("_r", [pA, pB, pC, pOut, k]);
+    const E = wasm.memory.slice(pOut, pOut + k);
+    const pkPtr = wasm.call("_c", []);
+    const pk = wasm.memory.slice(pkPtr, pkPtr + 32);
+
+    // PBKDF2 + seed-xor + SHA-256 → AES-256 key → decrypt the manifest URL.
+    const dk = pbkdf2(E, utf8(seed), 1000, 32);
+    for (let i = 0; i < 32; i++) dk[i] ^= seed.charCodeAt(i % seed.length);
+    const aesKey = sha256(dk);
+    const masterUrl = utf8Decode(aesCbcDecrypt(aesKey, b64ToBytes(ivB64), b64ToBytes(cipherB64))).trim();
+    if (!/^https?:\/\//.test(masterUrl)) return null;
+
+    let variants = [];
+    try { variants = await this.buildVariants(masterUrl, pk, audioPref); } catch (e3) { variants = []; }
+    if (variants.length === 0) return null;
+    return { variants: variants, subtitles: this.parseSubtitles(html) };
+  }
+
+  // ── HLS playlist decryption / rewrite ──────────────────────────────────────
+
+  baseOf(u) { return u.slice(0, u.lastIndexOf("/") + 1); }
+  absUrl(uri, base) { return /^https?:\/\//.test(uri) ? uri : base + uri; }
+
+  // Turn a segment list into an mpv "edl://" URL — a playlist carried in the
+  // URL itself, so the player needs neither a playlist file nor a proxy.
+  //
+  // Why not hand the player an HLS playlist: the CDN's own playlists are
+  // randomly XOR-encrypted and name segments with fake extensions, so they have
+  // to be rewritten, and a rewritten playlist has nowhere to live.  A data: URI
+  // does not work — mpv only treats "scheme://" as a URL, so it tries to open
+  // "data:application/…" as a file path, and even when forced through ffmpeg
+  // it is not recognised as HLS.  An EDL is native to mpv (libmpv is what
+  // Mangayomi embeds) and chains the segments into one continuous timeline.
+  //
+  // Each entry is "%<byte length>%<url>,start=<pts>,length=<seconds>"; the
+  // length prefix makes the URL safe whatever characters it holds.
+  //
+  // Without "!delay_open" mpv opens every segment up front to learn its real
+  // start time — measured at ~2.6 segments/s, so ~100 s of frozen spinner for
+  // 260 segments, per track.  With it, segments open as playback reaches them,
+  // but mpv can no longer discover where each one starts and assumes 0.  These
+  // segments do not start at 0: each carries the running MPEG-TS timestamp
+  // (video 1.483 s, then 7.489 s, 13.495 s…), so every segment after the first
+  // reads as out of range, mpv skips it instantly, and the player sees the
+  // stream "end" after the first ~6 s — Mangayomi then marks the episode done
+  // and jumps to the next one.  So in lazy mode each part must carry its own
+  // start=.  The first timestamp comes from the stream (firstPts) and each
+  // following segment starts exactly one #EXTINF later (checked: 1.483 →
+  // 7.489 = +6.006 for video, 1.414 → 7.4275 = +6.0135 for audio).
+  //
+  // The seek to start= is aimed EDL_PTS_LEAD s early on purpose.  Aimed at the
+  // exact first-frame timestamp, ffmpeg's TS seek lands on the *next* keyframe
+  // and each segment loses its first ~4.5 s; aimed a hair early it lands on the
+  // segment's own start.  The cost is one frame trimmed per segment.
+  toEdl(segs, mediaType, codec, pts0) {
+    const parts = [];
+    const lazy = !!codec;
+    if (lazy) parts.push("!delay_open,media_type=" + mediaType + ",codec=" + codec);
+    let at = (typeof pts0 === "number" ? pts0 : EDL_PTS_FALLBACK) - EDL_PTS_LEAD;
+    segs.forEach((s) => {
+      parts.push("%" + s.url.length + "%" + s.url + (lazy ? ",start=" + at.toFixed(4) : "") + ",length=" + s.dur);
+      at += s.dur;
+    });
+    return "edl://" + parts.join(";");
+  }
+
+  // The AES-128 key a playlist advertises (#EXT-X-KEY … URI="key.bin",IV=0x…),
+  // or null.  It never touches playback — segments requested as ".ts" are not
+  // encrypted — but on the rundowncdn mirror it is the key for the disguised
+  // ".png"/".webp" form, which firstPts reads.  The HD-2 playlists leave the tag
+  // out although the CDN serves the very same encrypted form, so a playlist
+  // without one reuses the key already seen for this video (this._segKey,
+  // cleared per getVideoList).
+  async segmentKey(text, base) {
+    try {
+      const tag = /#EXT-X-KEY:([^\n]*)/.exec(text);
+      const uri = tag && /URI="([^"]+)"/.exec(tag[1]);
+      const iv = tag && /IV=0x([0-9a-fA-F]{32})/.exec(tag[1]);
+      if (!uri || !iv) return this._segKey || null;
+      const res = await this.client.get(this.absUrl(uri[1], base), this.cdnHeaders);
+      // application/octet-stream carries no charset: one character per byte.
+      if (res.statusCode !== 200 || !res.body || res.body.length !== 16) return this._segKey || null;
+      const key = new Uint8Array(16), ivb = new Uint8Array(16);
+      for (let i = 0; i < 16; i++) {
+        const c = res.body.charCodeAt(i);
+        if (c > 255) return this._segKey || null;
+        key[i] = c;
+        ivb[i] = parseInt(iv[1].substr(2 * i, 2), 16);
+      }
+      this._segKey = { key: key, iv: ivb };
+      return this._segKey;
+    } catch (e) { return this._segKey || null; }
+  }
+
+  // The first presentation timestamp (seconds) in a rendition's first segment,
+  // or null if it cannot be read — the caller then falls back to
+  // EDL_PTS_FALLBACK, which is close enough to keep playing.
+  //
+  // The extension only sees response bodies as text, and ".ts" is served as
+  // "text/…; charset=utf-8", which would mangle every byte above 0x7f.  The
+  // ".png" form of the same segment is "image/png" with no charset, so it
+  // arrives one character per byte.  What it holds depends on the mirror:
+  //   atomic4cdn:   an 8-byte PNG signature, then the MPEG-TS XORed with
+  //                 SEGMENT_WRAP_KEY;
+  //   rundowncdn:   the MPEG-TS AES-128-CBC encrypted with the playlist's
+  //                 #EXT-X-KEY (keyInfo).
+  // A PES packet header carries the PTS in five bytes (33 bits, 90 kHz).  The
+  // first one sits in the fourth packet, so 1 KB is plenty.  Everything is
+  // sanity-checked, so a client that decodes differently just yields null.
+  async firstPts(segUrl, keyInfo) {
+    try {
+      const q = segUrl.indexOf("?");
+      const base = q < 0 ? segUrl : segUrl.slice(0, q);
+      const url = base.replace(/\.ts$/, ".png");
+      if (url === base) return null;
+      const res = await this.client.get(url, Object.assign({}, this.cdnHeaders, { Range: "bytes=0-1023" }));
+      if ((res.statusCode !== 206 && res.statusCode !== 200) || !res.body) return null;
+      const s = res.body;
+      if (s.length < 1024) return null;
+      const raw = new Uint8Array(1024);
+      for (let i = 0; i < 1024; i++) {
+        const c = s.charCodeAt(i);
+        if (c > 255) return null;
+        raw[i] = c;
+      }
+      let ts;
+      if (raw[0] === 0x89 && raw[1] === 0x50 && raw[2] === 0x4e && raw[3] === 0x47) {
+        ts = new Uint8Array(1016);
+        for (let i = 0; i < 1016; i++) ts[i] = raw[i + 8] ^ SEGMENT_WRAP_KEY[i & 15];
+      } else if (keyInfo) {
+        ts = aesCbcDecrypt(keyInfo.key, keyInfo.iv, raw, true);
+      } else {
+        return null;
+      }
+      const n = ts.length;
+      if (ts[0] !== 0x47 || ts[188] !== 0x47) return null;
+      for (let p = 0; p + 188 <= n; p += 188) {
+        if (ts[p] !== 0x47) return null;
+        const afc = (ts[p + 3] >> 4) & 3;
+        if (!(ts[p + 1] & 0x40) || afc === 0 || afc === 2) continue; // no payload start here
+        const o = p + 4 + (afc === 3 ? ts[p + 4] + 1 : 0);
+        if (ts[o] !== 0 || ts[o + 1] !== 0 || ts[o + 2] !== 1) continue; // not a PES header
+        if ((ts[o + 7] >> 6) < 2) continue; // carries no PTS
+        const pts = ((ts[o + 9] >> 1) & 7) * 1073741824 + ts[o + 10] * 4194304 +
+          (ts[o + 11] >> 1) * 32768 + ts[o + 12] * 128 + (ts[o + 13] >> 1);
+        const sec = pts / 90000;
+        return sec >= 0 && sec < 60 ? sec : null;
+      }
+    } catch (e) { /* fall through */ }
+    return null;
+  }
+
+  // Codec names as mpv's !delay_open wants them, from the master's CODECS list.
+  edlCodec(codecs, kind) {
+    const c = codecs || "";
+    if (kind === "video") return /avc1|h264/i.test(c) ? "h264" : /hvc1|hev1/i.test(c) ? "hevc" : "";
+    return /mp4a/i.test(c) ? "aac" : "";
+  }
+
+  // A playlist is served either plain (#EXTM3U…) or base64(plaintext XOR pk).
+  decryptPlaylist(body, pk) {
+    const t = (body || "").trim();
+    if (t.indexOf("#EXTM3U") === 0) return t;
+    const raw = b64ToBytes(t);
+    const out = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) out[i] = raw[i] ^ pk[i % pk.length];
+    return utf8Decode(out);
+  }
+
+  async fetchPlaylist(u, pk) {
+    const res = await this.client.get(u, this.cdnHeaders);
+    if (res.statusCode !== 200 || !res.body) throw new Error("playlist HTTP " + res.statusCode);
+    return this.decryptPlaylist(res.body, pk);
+  }
+
+  // The server ids ("hd1"/"hd2") the viewer has ticked.  HD-1 alone by
+  // default, and if nothing valid is ticked.
+  enabledServerIds() {
+    let picked = null;
+    try { picked = this.getPreference("reanime_servers"); } catch (e) { picked = null; }
+    return picked && picked.length ? picked : ["hd1"];
+  }
+
+  // Rewrite every segment/URI line to an absolute URL, and ask the CDN for the
+  // ".ts" form of each segment.
+  //
+  // Segments are disguised as static assets: the playlists address them with a
+  // rotating fake extension — .png, .webp, .otf, .woff2, .ttf, .woff, .eot —
+  // and for the image ones the CDN also wraps the payload in a matching fake
+  // header (8-byte PNG / 12-byte RIFF-WEBP) and XOR-encrypts the rest with a
+  // fixed 16-byte key, which the site's patched hls.js undoes in a custom
+  // loader.  No ordinary player can do that.
+  //
+  // The disguise is chosen purely from the *requested* extension, though:
+  // re-request the very same path as ".ts" and the CDN serves raw, unwrapped,
+  // unencrypted MPEG-TS.  So normalise whatever extension the playlist used —
+  // matching only the image ones is not enough, because roughly a fifth of the
+  // segments carry a font extension, and ffmpeg's HLS allowed_extensions list
+  // rejects .otf/.woff/.woff2/.ttf/.eot outright, which stalls playback into a
+  // permanent buffer (see memory/hls-extension-picky).
+  segmentUrl(uri, base) {
+    const abs = this.absUrl(uri, base);
+    const q = abs.indexOf("?");
+    let path = q < 0 ? abs : abs.slice(0, q);
+    const query = q < 0 ? "" : abs.slice(q);
+
+    const slash = path.lastIndexOf("/");
+    const file = path.slice(slash + 1);
+    const dot = file.lastIndexOf(".");
+    path = path.slice(0, slash + 1) + (dot > 0 ? file.slice(0, dot) : file) + ".ts";
+
+    let out = path + query;
+    return out.replace(/^(https?:\/\/)[^/]+/i, "$1" + SEGMENT_HOST);
+  }
+
+  // The segments of a media playlist as {url, dur}, in order.
+  //
+  // The playlist also carries `#EXT-X-KEY:METHOD=AES-128,URI="key.bin"`, which
+  // is deliberately ignored.  Segments requested as ".ts" arrive as plain
+  // MPEG-TS (verified: sync byte 0x47 at every 188-byte boundary) — the key
+  // belongs to the disguised .png/.webp form that the site's own player
+  // decrypts, so honouring it would run a cipher over clear data.  An fMP4
+  // playlist (EXT-X-MAP) cannot be expressed as an EDL, so it is refused.
+  parseSegments(text, base) {
+    if (text.indexOf("#EXT-X-MAP:") >= 0) return [];
+    const segs = [];
+    let dur = 0;
+    text.split("\n").forEach((line) => {
+      const t = line.trim();
+      if (t.indexOf("#EXTINF:") === 0) {
+        dur = parseFloat(t.slice(8)) || 0;
+      } else if (t && t.charAt(0) !== "#") {
+        segs.push({ url: this.segmentUrl(t, base), dur: dur });
+        dur = 0;
+      }
+    });
+    return segs;
+  }
+
+  // Fetches the master playlist and, if it references separate audio/video
+  // renditions, the video playlist and each audio playlist — exactly once
+  // each (skipping the audio rendition the "sub only"/"dub only" preference
+  // rules out).  The video becomes one edl:// URL and every fetched audio
+  // rendition another, handed to the player as external audio tracks with the
+  // preferred one first.
+  async buildVariants(masterUrl, pk, audioPref) {
+    const masterBase = this.baseOf(masterUrl);
+    const master = await this.fetchPlaylist(masterUrl, pk);
+
+    // No variants → already a flat, muxed media playlist.
+    if (master.indexOf("#EXT-X-STREAM-INF") < 0) {
+      const flat = this.parseSegments(master, masterBase);
+      if (flat.length === 0) return [];
+      return [{ url: this.toEdl(flat, "video", "") }];
     }
 
-    return videos;
+    // Parse audio renditions and the (single) video variant.
+    const lines = master.split("\n");
+    const audios = []; // { uri, lang, name }
+    let videoUri = null, streamInf = "", bestH = -1, bestBw = -1;
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i].trim();
+      if (l.indexOf("#EXT-X-MEDIA:") === 0 && l.indexOf("TYPE=AUDIO") >= 0) {
+        const uri = (l.match(/URI="([^"]+)"/) || [])[1];
+        if (uri) audios.push({
+          uri: uri,
+          lang: (l.match(/LANGUAGE="([^"]+)"/) || [])[1] || "",
+          name: (l.match(/NAME="([^"]+)"/) || [])[1] || "",
+        });
+      } else if (l.indexOf("#EXT-X-STREAM-INF") === 0) {
+        const next = (lines[i + 1] || "").trim();
+        if (next && next.charAt(0) !== "#") {
+          // Some shows list several renditions (1080p, 720p, 640x360) — keep
+          // the tallest, falling back to the highest BANDWIDTH.  Taking the
+          // last one listed played a 640x360 rendition on A Returner's Magic
+          // Should Be Special S2.
+          const h = parseInt((l.match(/RESOLUTION=\d+x(\d+)/) || [])[1] || "0", 10);
+          const bw = parseInt((l.match(/BANDWIDTH=(\d+)/) || [])[1] || "0", 10);
+          if (!videoUri || h > bestH || (h === bestH && bw > bestBw)) {
+            videoUri = next; streamInf = l; bestH = h; bestBw = bw;
+          }
+        }
+      }
+    }
+    if (!videoUri) return [];
+
+    const codecs = (streamInf.match(/CODECS="([^"]+)"/) || [])[1] || "";
+    const vCodec = this.edlCodec(codecs, "video");
+    const aCodec = this.edlCodec(codecs, "audio");
+
+    // "Sub only"/"dub only" drop the other rendition before it is ever
+    // fetched — three fewer requests (playlist, key, PTS probe) and a faster
+    // start.  If that leaves nothing (the episode has no dub, say, and the
+    // viewer asked for dub only), fetch every rendition instead of handing
+    // back a silent video — the video itself carries no audio, HLS splits it
+    // into these separate renditions.
+    let wanted = audios;
+    if (audioPref === "sub") wanted = audios.filter((a) => !this.isDubTrack(a));
+    else if (audioPref === "dub") wanted = audios.filter((a) => this.isDubTrack(a));
+    if (wanted.length === 0) wanted = audios;
+
+    // Each track is its own little chain — playlist, then its key, then the
+    // first timestamp — and the chains do not depend on one another, so they run
+    // side by side: the episode starts after the slowest chain, not after all of
+    // them one by one (about 2.6 s of waiting for three tracks, measured).  A
+    // failed audio track is just left out; a failed video track fails the lot.
+    const jobs = [{ uri: videoUri, video: true }].concat(wanted.map((a) => ({ uri: a.uri, video: false, meta: a })));
+    const done = await Promise.all(jobs.map(async (j) => {
+      try {
+        const u = this.absUrl(j.uri, masterBase);
+        const base = this.baseOf(u);
+        const text = await this.fetchPlaylist(u, pk);
+        const segs = this.parseSegments(text, base);
+        if (segs.length === 0) {
+          if (j.video) throw new Error("empty video playlist");
+          return null;
+        }
+        const codec = j.video ? vCodec : aCodec;
+        // Only the lazy form needs it (see toEdl); one small ranged request.
+        const pts = codec ? await this.firstPts(segs[0].url, await this.segmentKey(text, base)) : null;
+        return { job: j, segs: segs, pts: pts };
+      } catch (e) {
+        if (j.video) throw e;
+        return null;
+      }
+    }));
+    const video = done[0];
+    if (!video) return [];
+
+    // Put the preferred audio first; the player can still switch to the rest.
+    const wantDub = audioPref === "dub" || audioPref === "dub_sub";
+    const tracks = done.slice(1).filter((t) => t).map((t) => ({
+      segs: t.segs,
+      pts: t.pts,
+      label: t.job.meta.name || t.job.meta.lang || "Audio",
+      dub: this.isDubTrack(t.job.meta),
+    }));
+    const ordered = tracks.filter((t) => t.dub === wantDub).concat(tracks.filter((t) => t.dub !== wantDub));
+
+    return [{
+      url: this.toEdl(video.segs, "video", vCodec, video.pts),
+      audios: ordered.map((t) => ({ file: this.toEdl(t.segs, "audio", aCodec, t.pts), label: t.label })),
+    }];
   }
 
-  async getPageList() {
-    return [];
+  // English = "dub" here: reanime's only alternate audio rendition is the
+  // English dub, everything else (invariably the Japanese original) is "sub".
+  isDubTrack(a) {
+    return /eng/i.test(a.lang) || /english|dub/i.test(a.name);
   }
 
-  async getHtmlContent() {
-    return "";
+  matchOne(str, rx) {
+    const m = str.match(rx);
+    return m ? m[1] : null;
   }
 
-  async cleanHtmlContent(html) {
-    return html;
+  // Build a regex for a (possibly quoted) object key → its string value.
+  fieldRx(field) {
+    const esc = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return new RegExp('"?' + esc + '"?\\s*:\\s*"([^"]+)"');
+  }
+
+  // Mangayomi auto-selects a subtitle only on the first stream, matching
+  // `subtitles.firstWhere(sub => sub.label == <app's default subtitle
+  // language>, orElse: subtitles.first)` — so whatever is index 0 plays
+  // automatically unless a label happens to equal the app's own language
+  // setting exactly.  reanime's labels are descriptive ("English (Full
+  // Subtitles [9volt])"), so that match essentially never hits and index 0
+  // always wins.  Put the best full-English-dialogue track first.
+  //
+  // The site flags its own recommended track with `default:true`, and that
+  // is usually the right call — but not always: anilist 21 ep15 flags
+  // "Episode Name (Restyled By Simmsy)" as default, which is only the
+  // title-card text, while a real "Full Subtitles (Restyled By Simmsy)" sits
+  // right next to it unflagged. So `default:true` is trusted UNLESS it points
+  // at something identifiably not full dialogue (signs-only, a title card),
+  // in which case a label containing "full" wins instead, then any other
+  // plain English track, then the AI-generated "Dubtitle" (timed to the dub,
+  // lower quality but still full dialogue), then signs-only/title-card/other
+  // languages last.  Verified against 14 episodes across 6 shows + a movie.
+  parseSubtitles(html) {
+    const block = this.matchOne(html, /subtitles:\[(.*?)\](?:,[a-zA-Z0-9_"])/);
+    if (!block) return [];
+    const objs = block.match(/\{[^}]*\}/g) || [];
+    const subs = [];
+    objs.forEach((o) => {
+      const url = this.matchOne(o, /url:"([^"]+)"/);
+      const lang = this.matchOne(o, /language:"([^"]+)"/);
+      if (!url || !lang) return;
+      subs.push({ file: url, label: lang, def: /default:true/.test(o) });
+    });
+    subs.sort((a, b) => {
+      const ra = this.subtitleRank(a.label, a.def), rb = this.subtitleRank(b.label, b.def);
+      if (ra !== rb) return ra - rb;
+      return (b.def ? 1 : 0) - (a.def ? 1 : 0);
+    });
+    return subs.map((s) => ({ file: s.file, label: s.label }));
+  }
+
+  // Lower is more preferred — see parseSubtitles.
+  subtitleRank(label, isDefault) {
+    const l = (label || "").toLowerCase();
+    const english = /^english\b/.test(l);
+    const titleCardOrSignsOnly = /\bsigns?\b/.test(l) || /episode\s*name/.test(l);
+    const aiDubtitle = /dubtitle/.test(l) || /\(ai\)/.test(l);
+    if (english && /\bfull\b/.test(l)) return 0;
+    if (english && isDefault && !titleCardOrSignsOnly) return 1;
+    if (english && !titleCardOrSignsOnly && !aiDubtitle) return 2;
+    if (english && aiDubtitle) return 3;
+    return 4;
+  }
+
+  // ── Filters & preferences ──────────────────────────────────────────────────
+
+  selectValues(arr) {
+    const out = [{ type_name: "SelectOption", name: "Any", value: "" }];
+    arr.forEach((x) => out.push({ type_name: "SelectOption", name: x.name, value: x.value }));
+    return out;
   }
 
   getFilterList() {
+    const genres = [
+      "Action", "Adventure", "Comedy", "Drama", "Ecchi", "Fantasy", "Horror",
+      "Mahou Shoujo", "Mecha", "Music", "Mystery", "Psychological", "Romance",
+      "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Suspense", "Thriller",
+    ].map((g) => ({ type_name: "CheckBox", name: g, value: g }));
+
     return [
+      { type_name: "GroupFilter", name: "Genres", state: genres },
       {
-        type: "format",
-        name: "Format",
-        type_name: "SelectFilter",
-        values: ["__unset__", "TV", "TV_SHORT", "MOVIE", "SPECIAL", "OVA", "ONA"]
+        type_name: "SelectFilter", name: "Format", state: 0,
+        values: this.selectValues([
+          { name: "TV", value: "TV" }, { name: "Movie", value: "MOVIE" },
+          { name: "ONA", value: "ONA" }, { name: "OVA", value: "OVA" },
+          { name: "Special", value: "SPECIAL" }, { name: "TV Short", value: "TV_SHORT" },
+          { name: "Music", value: "MUSIC" },
+        ]),
       },
       {
-        type: "status",
-        name: "Status",
-        type_name: "SelectFilter",
-        values: ["__unset__", "RELEASING", "FINISHED", "NOT_YET_RELEASED", "CANCELLED"]
+        type_name: "SelectFilter", name: "Status", state: 0,
+        values: this.selectValues([
+          { name: "Releasing", value: "Releasing" }, { name: "Finished", value: "Finished" },
+          { name: "Not Yet Released", value: "Not Yet Released" }, { name: "Cancelled", value: "Cancelled" },
+        ]),
       },
       {
-        type: "season",
-        name: "Season",
-        type_name: "SelectFilter",
-        values: ["__unset__", "WINTER", "SPRING", "SUMMER", "FALL"]
+        type_name: "SelectFilter", name: "Season", state: 0,
+        values: this.selectValues([
+          { name: "Winter", value: "WINTER" }, { name: "Spring", value: "SPRING" },
+          { name: "Summer", value: "SUMMER" }, { name: "Fall", value: "FALL" },
+        ]),
       },
       {
-        type: "genre",
-        name: "Genre",
-        type_name: "SelectFilter",
-        values: [
-          "__unset__",
-          "Action", "Adventure", "Comedy", "Drama", "Ecchi", "Fantasy",
-          "Horror", "Mahou Shoujo", "Mecha", "Music", "Mystery", "Psychological",
-          "Romance", "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Thriller"
-        ]
-      }
+        type_name: "SelectFilter", name: "Year", state: 0,
+        values: this.selectValues(this.yearOptions()),
+      },
     ];
+  }
+
+  yearOptions() {
+    const current = new Date().getFullYear() + 1;
+    const out = [];
+    for (let y = current; y >= 1960; y--) out.push({ name: "" + y, value: "" + y });
+    return out;
   }
 
   getSourcePreferences() {
     return [
       {
-        key: this.prefTitleLanguage,
-        listPreference: {
-          title: "Title Display Language",
-          summary: "Preferred language for anime titles",
-          valueIndex: 0,
-          entries: ["English", "Romaji", "Native (Japanese)"],
-          entryValues: ["english", "romaji", "native"]
-        }
-      },
-      {
-        key: this.prefServerOrder,
-        listPreference: {
-          title: "Preferred Server Priority",
-          summary: "Select server to prioritize for playback",
-          valueIndex: 0,
-          entries: ["HD-2 (Default)", "HD-1"],
-          entryValues: ["HD-2", "HD-1"]
-        }
-      },
-      {
-        key: this.prefWorkerUrl,
+        key: "reanime_base_url",
         editTextPreference: {
-          title: "Cloudflare Worker Proxy URL",
-          summary: "Optional: FlixCloud decryption worker URL (e.g. https://xxx.workers.dev)",
-          value: "https://flix-proxy.wsun1023.workers.dev",
-          dialogTitle: "Worker URL"
-        }
-      }
+          title: "Override base URL",
+          summary: "Change if the site moves to a new domain",
+          value: "https://reanime.cz",
+          dialogTitle: "Override base URL",
+          dialogMessage: "",
+        },
+      },
+      {
+        key: "reanime_title_lang",
+        listPreference: {
+          title: "Preferred title language",
+          summary: "",
+          valueIndex: 1,
+          entries: ["Romaji", "English", "Native"],
+          entryValues: ["romaji", "english", "native"],
+        },
+      },
+      {
+        key: "reanime_servers",
+        multiSelectListPreference: {
+          title: "Servers",
+          summary: "HD-1 by default. HD-1 and HD-2 are reanime's own two servers for an episode — mirrors " +
+            "of the same video through a different gateway, not different quality — so this only matters " +
+            "if HD-1 ever stalls or fails. Tick HD-2 too to add it as a backup in the quality picker.",
+          values: ["hd1"],
+          entries: ["HD-1 (default)", "HD-2"],
+          entryValues: ["hd1", "hd2"],
+        },
+      },
+      {
+        key: "reanime_audio_pref",
+        listPreference: {
+          title: "Preferred audio",
+          summary: "Choose playback order. When both tracks are selected the first plays automatically; " +
+            "the second is available as a fallback in the player. \"X only\" also skips fetching the " +
+            "other track, for a faster start.",
+          valueIndex: 0,
+          entries: [
+            "Sub then Dub (Sub plays, Dub as backup)",
+            "Dub then Sub (Dub plays, Sub as backup)",
+            "Sub only",
+            "Dub only",
+          ],
+          entryValues: ["sub_dub", "dub_sub", "sub", "dub"],
+        },
+      },
     ];
   }
 }
