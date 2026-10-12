@@ -14,14 +14,14 @@ const mangayomiSources = [
     "sourceCodeUrl":
       "https://raw.githubusercontent.com/wsun1023/mangayomi/main/reanime.js",
     "apiUrl": "https://reanime.cz",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "isManga": false,
     "itemType": 1,
     "isFullData": false,
     "appMinVerReq": "0.5.0",
     "additionalParams": "",
     "sourceCodeLanguage": 1,
-    "notes": "",
+    "notes": "한국어 제목 검색 지원 (Anissia + AniList 자동 변환, TMDB 연동 옵션)",
     "pkgPath": "anime/src/en/reanime.js",
   },
 ];
@@ -617,14 +617,188 @@ class DefaultExtension extends MProvider {
     return { list: this.mapResults(data.data), hasNextPage: !!data.has_more };
   }
 
+  cleanOriginalSubject(s) {
+    if (!s) return "";
+    let c = s.trim();
+    c = c.replace(/^(?:劇場版|劇場総集編|総集編|映画)\s*[『「【]?/i, "");
+    c = c.replace(/^[『「【]([^』」】]+)[』」】]/, "$1");
+    c = c.replace(/\s*(?:The Final Season|Final Season|Season\s*\d+|part\s*\d+|第\d+期|第\d+クール|\d+기|完結編).*$/i, "");
+    c = c.replace(/\s*[『「【《][^』」】》]+[』」】》]/g, "");
+    c = c.replace(/\s*[:：~～]\s*.*$/, "");
+    c = c.replace(/\s*-\s*[A-Za-z0-9가-힣\u4e00-\u9faf].*$/, "");
+    c = c.replace(/[』」】》]/g, "").trim();
+    c = c.replace(/\s+[\u4e00-\u9faf\u3040-\u309f\u30a0-\u30ff]+(?:編|篇)$/, "");
+    c = c.replace(/\s+Re[:：].*$/i, "");
+    c = c.replace(/\s+THE\s+LAST\s+ATTACK.*$/i, "");
+    c = c.replace(/\s+FAN\s+LETTER.*$/i, "");
+    return c.trim();
+  }
+
+  async fetchAnissia(query) {
+    try {
+      const url = "https://api.anissia.net/anime/list/0?q=" + encodeURIComponent(query);
+      const res = await new Client().get(url, { "Accept": "application/json" });
+      if (res && res.statusCode === 200 && res.body) {
+        return JSON.parse(res.body);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  async fetchAniList(query) {
+    try {
+      const gql = JSON.stringify({
+        query: "query($search: String) { Page(page: 1, perPage: 3) { media(search: $search, type: ANIME) { title { romaji english native } } } }",
+        variables: { search: query }
+      });
+      const res = await new Client().post(
+        "https://graphql.anilist.co",
+        { "Content-Type": "application/json", "Accept": "application/json" },
+        gql
+      );
+      if (res && res.statusCode === 200 && res.body) {
+        return JSON.parse(res.body);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  async fetchTmdb(query, apiKey) {
+    try {
+      const isBearer = apiKey.indexOf("eyJ") === 0;
+      const headers = { "Accept": "application/json", "User-Agent": this.ua };
+      if (isBearer) headers["Authorization"] = "Bearer " + apiKey;
+      const url = "https://api.themoviedb.org/3/search/multi?query=" + encodeURIComponent(query) +
+        "&include_adult=false&language=ko-KR" + (isBearer ? "" : "&api_key=" + apiKey);
+      const res = await new Client().get(url, headers);
+      if (res && res.statusCode === 200 && res.body) {
+        return JSON.parse(res.body);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  async resolveKoreanCandidates(query) {
+    const candidates = [];
+    const add = (str) => {
+      if (!str || typeof str !== "string") return;
+      const s = str.trim();
+      if (s && candidates.indexOf(s) < 0) candidates.push(s);
+    };
+
+    const self = this;
+    const tasks = [];
+
+    // 1. Anissia (~35ms, maps Korean -> Japanese/English originalSubject)
+    tasks.push((async () => {
+      const data = await self.fetchAnissia(query);
+      const items = (data && data.data && Array.isArray(data.data.content)) ? data.data.content : [];
+      items.sort((a, b) => {
+        const aExact = (a.subject || "").trim() === query.trim();
+        const bExact = (b.subject || "").trim() === query.trim();
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+        return (a.subject || "").length - (b.subject || "").length;
+      });
+      for (let i = 0; i < items.length && i < 4; i++) {
+        const orig = (items[i].originalSubject || "").trim();
+        if (orig) {
+          const clean = self.cleanOriginalSubject(orig);
+          if (clean) add(clean);
+          add(orig);
+        }
+      }
+    })());
+
+    // 2. AniList GraphQL (multilingual search, no API key needed)
+    tasks.push((async () => {
+      const data = await self.fetchAniList(query);
+      const media = data && data.data && data.data.Page && data.data.Page.media;
+      if (Array.isArray(media)) {
+        for (let i = 0; i < media.length; i++) {
+          const t = media[i].title || {};
+          if (t.english) {
+            add(self.cleanOriginalSubject(t.english));
+            add(t.english);
+          }
+          if (t.romaji) {
+            add(self.cleanOriginalSubject(t.romaji));
+            add(t.romaji);
+          }
+          if (t.native) {
+            add(self.cleanOriginalSubject(t.native));
+            add(t.native);
+          }
+        }
+      }
+    })());
+
+    // 3. TMDB Multi-Search (if optional preference reanime_tmdb_api_key is set)
+    const tmdbKey = (this.getPreference("reanime_tmdb_api_key") || "").trim();
+    if (tmdbKey) {
+      tasks.push((async () => {
+        const data = await self.fetchTmdb(query, tmdbKey);
+        const list = (data && Array.isArray(data.results)) ? data.results : [];
+        for (let i = 0; i < list.length && i < 3; i++) {
+          const r = list[i];
+          if (r.original_name) add(self.cleanOriginalSubject(r.original_name));
+          if (r.original_title) add(self.cleanOriginalSubject(r.original_title));
+          if (r.name) add(self.cleanOriginalSubject(r.name));
+          if (r.title) add(self.cleanOriginalSubject(r.title));
+        }
+      })());
+    }
+
+    await Promise.all(tasks);
+    add(query);
+    return candidates;
+  }
+
   async search(query, page, filters) {
     try {
       if (query && query.length > 0) {
         const offset = (page - 1) * PAGE_SIZE;
-        const url = this.apiUrl + "/api/v1/search?q=" + encodeURIComponent(query) +
-          "&limit=" + PAGE_SIZE + "&offset=" + offset;
-        const data = await this.getJSON(url);
-        return { list: this.mapResults(data.results), hasNextPage: offset + PAGE_SIZE < (data.total || 0) };
+        const isKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(query);
+
+        if (!isKorean) {
+          const url = this.apiUrl + "/api/v1/search?q=" + encodeURIComponent(query) +
+            "&limit=" + PAGE_SIZE + "&offset=" + offset;
+          const data = await this.getJSON(url);
+          return { list: this.mapResults(data.results), hasNextPage: offset + PAGE_SIZE < (data.total || 0) };
+        }
+
+        const candidates = await this.resolveKoreanCandidates(query);
+        const nonKorean = candidates.filter(function (c) {
+          return !/[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(c);
+        });
+        const searchTerms = nonKorean.length > 0 ? nonKorean.slice(0, 4) : [query];
+
+        const self = this;
+        const requests = searchTerms.map(function (term) {
+          const u = self.apiUrl + "/api/v1/search?q=" + encodeURIComponent(term) +
+            "&limit=" + PAGE_SIZE + "&offset=" + offset;
+          return self.getJSON(u).catch(function () { return null; });
+        });
+
+        const responses = await Promise.all(requests);
+        const seenIds = {};
+        const combined = [];
+        let hasNext = false;
+
+        for (let i = 0; i < responses.length; i++) {
+          const d = responses[i];
+          if (!d || !Array.isArray(d.results)) continue;
+          if (offset + PAGE_SIZE < (d.total || 0)) hasNext = true;
+          for (let j = 0; j < d.results.length; j++) {
+            const item = d.results[j];
+            if (item && item.anime_id && !seenIds[item.anime_id]) {
+              seenIds[item.anime_id] = true;
+              combined.push(item);
+            }
+          }
+        }
+
+        return { list: this.mapResults(combined), hasNextPage: hasNext };
       }
       return await this.searchAPI(this.buildFilterQuery(filters), page);
     } catch (e) {
@@ -1426,6 +1600,16 @@ class DefaultExtension extends MProvider {
             "Dub only",
           ],
           entryValues: ["sub_dub", "dub_sub", "sub", "dub"],
+        },
+      },
+      {
+        key: "reanime_tmdb_api_key",
+        editTextPreference: {
+          title: "TMDB API Key (선택 사항)",
+          summary: "한글 제목 검색 보강용 TMDB API Key 또는 Read Access Token (입력하지 않아도 Anissia/AniList를 통해 자동 검색됨)",
+          value: "",
+          dialogTitle: "TMDB API Key",
+          dialogMessage: "TMDB API Key 또는 v4 토큰을 입력하면 애니메이션/영화의 한글 검색 정확도가 더욱 향상됩니다.",
         },
       },
     ];
