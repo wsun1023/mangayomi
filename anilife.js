@@ -1,18 +1,25 @@
 const mangayomiSources = [{
   name: "애니라이프",
-  lang: "ko",
+  id: 780920260911803,
   baseUrl: "https://anilife01.tv",
-  apiUrl: "",
-  iconUrl: "https://dc-toki-mangayomi-media.pages.dev/icon/ko.media.png",
+  lang: "ko",
   typeSource: "single",
-  itemType: 1,
-  isNsfw: false,
-  hasCloudflare: false,
-  version: "0.1.14",
+  iconUrl: "https://dc-toki-mangayomi-media.pages.dev/icon/ko.media.png",
   dateFormat: "",
   dateFormatLocale: "",
+  isNsfw: false,
+  hasCloudflare: false,
+  sourceCodeUrl: "https://raw.githubusercontent.com/wsun1023/mangayomi/main/anilife.js",
+  apiUrl: "",
+  version: "0.1.15",
+  isManga: false,
+  itemType: 1,
+  isFullData: false,
+  appMinVerReq: "0.9.2",
+  additionalParams: "",
+  sourceCodeLanguage: 1,
   pkgPath: "anime/src/ko/anilife.js",
-  notes: "포스터 이미지 wsrv.nl CDN 프록시 적용(국내 방심위 차단 우회) · RHTTP/Dart 듀얼 클라이언트 안정화 · TVWiki/Linkkf 다중 소스 재생 폴백 연동 · 목록·상세 10분 캐시 · 실제 회차 번호 유지 · 사이트 자막 토글 · 중앙신호등 주소 자동 동기화"
+  notes: "포스터 이미지 wsrv.nl CDN 프록시 적용(국내 방심위 차단 우회) · RHTTP/Dart 듀얼 클라이언트 안정화 · TVWiki 다중 소스 재생 폴백 연동 · MOA internal-error 500 예외 방어 및 no-streams 정상 반환 · 목록·상세 10분 캐시 · 실제 회차 번호 유지 · 사이트 자막 토글 · 중앙신호등 주소 자동 동기화"
 }];
 
 function dcResolveListCardManifest(data, scope, tab) {
@@ -143,6 +150,14 @@ class DefaultExtension extends MProvider {
 
   get supportsLatest() { return true; }
   get base() { return this.fallbackBaseUrl; }
+  get baseUrl() { return this.fallbackBaseUrl; }
+
+  async _clearTransportFailure() {
+    try {
+      const client = new Client({ persistentConnection: false, noProxy: true, timeout: 5 });
+      await client.get(this.eventManifestUrl + "?ping=" + Date.now(), { Accept: "application/json" });
+    } catch (_) {}
+  }
 
   _text(value) { return value === null || value === undefined ? "" : String(value); }
   _trimSlash(value) { return this._text(value).trim().replace(/\/+$/, ""); }
@@ -247,9 +262,11 @@ class DefaultExtension extends MProvider {
     try {
       const base = await this._resolveBaseUrl();
       for (const query of this._anissiaSearchNames(name)) {
-        const response = await this._clientGet(base + "/api/anime?page=1&limit=10&q=" + encodeURIComponent(query), {Accept: "application/json, text/plain, */*", Referer: base + "/"}, 10);
-        if (!response || response.statusCode < 200 || response.statusCode >= 300) continue;
-        const data = JSON.parse(this._text(response.body)), items = Array.isArray(data && data.items) ? data.items : [], wanted = this._titleBridgeKey(query);
+        let data = null;
+        try {
+          data = await this.proxyJson(base, base + "/api/anime?page=1&limit=10&q=" + encodeURIComponent(query));
+        } catch (_) { continue; }
+        const items = Array.isArray(data && data.items) ? data.items : [], wanted = this._titleBridgeKey(query);
         const match = items.find((item) => this._titleBridgeKey(item && item.title) === wanted || this._titleBridgeKey(item && item.titleOriginal) === wanted);
         if (!match) continue;
         const direct = await this._fillBridgeMetadata(this._titleBridgeMetadataFromItem(name, match));
@@ -787,53 +804,55 @@ class DefaultExtension extends MProvider {
   }
 
   async _resolveTvwikiSource(sourceUrl, episodeNumber) {
-    const match = sourceUrl.match(/tvwiki:\/\/([^\/]+)\/(\d+)/i) || sourceUrl.match(/\/([^\/]+)\/(\d+)(?:\/|$)/);
-    if (!match) return null;
-    const category = match[1];
-    const wrId = match[2];
-    const episodePath = "/" + category + "/" + wrId + "/" + episodeNumber;
-    const base = "https://tvwiki53.net";
-    const endpoint = base + "/bbs/get_episode.php?bo_table=" + encodeURIComponent(category) + "&wr_id=" + encodeURIComponent(wrId) + "&ep_idx=" + encodeURIComponent(episodeNumber);
-    const body = await this._requestText(endpoint, base + episodePath, 15);
-    const data = JSON.parse(body);
-    if (!data || data.success !== true || !data.episode) return null;
-    const epData = data.episode;
-    const sessionData = epData.session_data1 || epData.session_data2;
-    if (!sessionData || !epData.hls_url) return null;
+    try {
+      const match = sourceUrl.match(/tvwiki:\/\/([^\/]+)\/(\d+)/i) || sourceUrl.match(/\/([^\/]+)\/(\d+)(?:\/|$)/);
+      if (!match) return null;
+      const category = match[1];
+      const wrId = match[2];
+      const episodePath = "/" + category + "/" + wrId + "/" + episodeNumber;
+      const base = "https://tvwiki53.net";
+      const endpoint = base + "/bbs/get_episode.php?bo_table=" + encodeURIComponent(category) + "&wr_id=" + encodeURIComponent(wrId) + "&ep_idx=" + encodeURIComponent(episodeNumber);
+      const body = await this._requestText(endpoint, base + episodePath, 15);
+      const data = JSON.parse(body);
+      if (!data || data.success !== true || !data.episode) return null;
+      const epData = data.episode;
+      const sessionData = epData.session_data1 || epData.session_data2;
+      if (!sessionData || !epData.hls_url) return null;
 
-    const sessionPayload = typeof sessionData === "string" ? JSON.parse(sessionData) : sessionData;
-    const bridgeHeaders = { Referer: this.assetBaseUrl + "/", Origin: this.assetBaseUrl, "Content-Type": "application/json; charset=utf-8", Accept: "application/json" };
-    let sessionResult = null;
-    for (const kind of this._clientOrder()) {
-      try {
-        const client = this._client(kind, 12);
-        const resp = await client.post(this.assetBaseUrl + "/api/tvwiki-session", bridgeHeaders, { baseUrl: base, episodePath, sessionData: sessionPayload });
-        if (resp && resp.statusCode >= 200 && resp.statusCode < 300) {
-          const parsed = JSON.parse(this._text(resp.body));
-          if (parsed && parsed.success && parsed.player_url && parsed.t && parsed.sig) {
-            sessionResult = parsed;
-            break;
+      const sessionPayload = typeof sessionData === "string" ? JSON.parse(sessionData) : sessionData;
+      const bridgeHeaders = { Referer: this.assetBaseUrl + "/", Origin: this.assetBaseUrl, "Content-Type": "application/json; charset=utf-8", Accept: "application/json" };
+      let sessionResult = null;
+      for (const kind of this._clientOrder()) {
+        try {
+          const client = this._client(kind, 12);
+          const resp = await client.post(this.assetBaseUrl + "/api/tvwiki-session", bridgeHeaders, { baseUrl: base, episodePath, sessionData: sessionPayload });
+          if (resp && resp.statusCode >= 200 && resp.statusCode < 300) {
+            const parsed = JSON.parse(this._text(resp.body));
+            if (parsed && parsed.success && parsed.player_url && parsed.t && parsed.sig) {
+              sessionResult = parsed;
+              break;
+            }
           }
-        }
-      } catch (_) {}
-    }
-    if (!sessionResult) return null;
+        } catch (_) {}
+      }
+      if (!sessionResult) return null;
 
-    const separator = this._text(sessionResult.player_url).indexOf("?") >= 0 ? "&" : "?";
-    const playerUrl = this.absolute(base + episodePath, sessionResult.player_url) + separator + "t=" + encodeURIComponent(sessionResult.t) + "&sig=" + encodeURIComponent(sessionResult.sig);
-    const playlistUrl = this.absolute(playerUrl, epData.hls_url);
-    const streamHeaders = { "User-Agent": this.userAgent, Accept: "*/*", Referer: playerUrl, Origin: this._origin(playerUrl) };
-    const playlist = await this._requestText(playlistUrl, playerUrl, 15);
-    const keyMatch = playlist.match(/#EXT-X-KEY:[^\r\n]*URI="([^"]+)"/i);
-    if (!keyMatch) return [{ url: playlistUrl, originalUrl: playlistUrl, quality: "TVWiki 자동 (HLS)", headers: streamHeaders, subtitles: [], audios: [] }];
+      const separator = this._text(sessionResult.player_url).indexOf("?") >= 0 ? "&" : "?";
+      const playerUrl = this.absolute(base + episodePath, sessionResult.player_url) + separator + "t=" + encodeURIComponent(sessionResult.t) + "&sig=" + encodeURIComponent(sessionResult.sig);
+      const playlistUrl = this.absolute(playerUrl, epData.hls_url);
+      const streamHeaders = { "User-Agent": this.userAgent, Accept: "*/*", Referer: playerUrl, Origin: this._origin(playerUrl) };
+      const playlist = await this._requestText(playlistUrl, playerUrl, 15);
+      const keyMatch = playlist.match(/#EXT-X-KEY:[^\r\n]*URI="([^"]+)"/i);
+      if (!keyMatch) return [{ url: playlistUrl, originalUrl: playlistUrl, quality: "TVWiki 자동 (HLS)", headers: streamHeaders, subtitles: [], audios: [] }];
 
-    const keyUrl = this.absolute(playlistUrl, keyMatch[1]);
-    const envelope = await this._requestText(keyUrl, playerUrl, 15);
-    const common = "u=" + encodeURIComponent(this._base64Url(playlistUrl)) + "&r=" + encodeURIComponent(this._base64Url(playerUrl)) + "&x=" + encodeURIComponent(this._base64Url(envelope));
-    return [
-      { url: this.assetBaseUrl + "/api/tvwiki-playlist.m3u8?m=f&" + common, originalUrl: playlistUrl, quality: "TVWiki 빠른 재생 (CDN 직접)", headers: streamHeaders, subtitles: [], audios: [] },
-      { url: this.assetBaseUrl + "/api/tvwiki-playlist.m3u8?m=p&" + common, originalUrl: playlistUrl, quality: "TVWiki 호환 재생 (중계)", headers: streamHeaders, subtitles: [], audios: [] }
-    ];
+      const keyUrl = this.absolute(playlistUrl, keyMatch[1]);
+      const envelope = await this._requestText(keyUrl, playerUrl, 15);
+      const common = "u=" + encodeURIComponent(this._base64Url(playlistUrl)) + "&r=" + encodeURIComponent(this._base64Url(playerUrl)) + "&x=" + encodeURIComponent(this._base64Url(envelope));
+      return [
+        { url: this.assetBaseUrl + "/api/tvwiki-playlist.m3u8?m=f&" + common, originalUrl: playlistUrl, quality: "TVWiki 빠른 재생 (CDN 직접)", headers: streamHeaders, subtitles: [], audios: [] },
+        { url: this.assetBaseUrl + "/api/tvwiki-playlist.m3u8?m=p&" + common, originalUrl: playlistUrl, quality: "TVWiki 호환 재생 (중계)", headers: streamHeaders, subtitles: [], audios: [] }
+      ];
+    } catch (_) { return null; }
   }
 
   async _resolveLinkkfSource(sourceUrl, episodeNumber) {
@@ -853,66 +872,79 @@ class DefaultExtension extends MProvider {
   }
 
   async getVideoList(url) {
-    const info = this.episodeFromPlaybackUrl(url);
-    const base = await this._resolveBaseUrl();
-    const pageUrl = this.contentUrl(base, info.animeId, info.episode);
-    let data = null;
-    let lastError = null;
-
-    // 1. Try Anilife proxyJson
-    for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      let info = null;
       try {
-        data = await this.proxyJson(base, base + "/api/playback/" + info.animeId + "/" + info.episode + "?request=" + Date.now() + "-" + attempt);
-        if (data && (data.videoUrl || data.backupUrl)) break;
-      } catch (error) {
-        lastError = error;
+        info = this.episodeFromPlaybackUrl(url);
+      } catch (_) {
+        await this._clearTransportFailure();
+        return [];
       }
-    }
 
-    const candidates = data ? [data.videoUrl, data.backupUrl].filter(function(value, index, all) { return value && all.indexOf(value) === index; }) : [];
-    if (candidates.length) {
-      const subtitles = this._siteSubtitlesDisabled() ? [] : (data.subtitleUrl ? [{file: this.absolute(base, data.subtitleUrl), label: "사이트 자막"}] : []);
-      const videos = [];
-      for (let index = 0; index < candidates.length; index += 1) {
-        const value = candidates[index];
-        const stream = this.absolute(base, value);
-        const quality = index === 0 ? "자동 (HLS)" : "보조 영상";
-        const expanded = await this._expandHls(stream, pageUrl, quality);
-        for (const item of expanded) {
-          videos.push({url: item.url, originalUrl: this._hlsOriginalUrl(item.url), quality: item.quality, headers: {Referer: pageUrl, Origin: base}, subtitles, audios: []});
+      const base = await this._resolveBaseUrl();
+      const pageUrl = this.contentUrl(base, info.animeId, info.episode);
+      const query = this._parseQueryParams(url);
+      let sourceType = (query.st || "").toLowerCase();
+      let sourceUrl = query.su || "";
+
+      // 1. If sourceType or sourceUrl is missing from URL query, fetch from detail cache
+      if (!sourceUrl || !sourceType) {
+        try {
+          const detail = await this._cachedJson("detail", base + "/api/anime/" + info.animeId + "?v=playback-policy-v2", this.cacheMs);
+          if (detail && detail.item) {
+            if (!sourceUrl && detail.item.sourceUrl) sourceUrl = this._text(detail.item.sourceUrl).trim();
+            if (!sourceType) {
+              const ep = Array.isArray(detail.item.episodes) ? detail.item.episodes.find(function(e) { return String(e && e.number) === String(info.episode); }) : null;
+              sourceType = this._text((ep && ep.sourceType) || detail.item.sourceType || "").toLowerCase().trim();
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 2. Fallback to underlying sources (TVWiki, Linkkf) first if available
+      if (sourceType === "tvwiki" || sourceUrl.startsWith("tvwiki://") || /tvwiki/i.test(sourceUrl)) {
+        try {
+          const tvwikiVideos = await this._resolveTvwikiSource(sourceUrl, info.episode);
+          if (tvwikiVideos && tvwikiVideos.length) return tvwikiVideos;
+        } catch (_) {}
+      }
+
+      if (sourceType === "linkkf" || /linkkf\.(?:tv|app|com|net)/i.test(sourceUrl)) {
+        try {
+          const linkkfVideos = await this._resolveLinkkfSource(sourceUrl, info.episode);
+          if (linkkfVideos && linkkfVideos.length) return linkkfVideos;
+        } catch (_) {}
+      }
+
+      // 3. Try Anilife native playback proxy
+      let data = null;
+      try {
+        data = await this.proxyJson(base, base + "/api/playback/" + info.animeId + "/" + info.episode + "?request=" + Date.now());
+      } catch (_) {}
+
+      const candidates = data ? [data.videoUrl, data.backupUrl].filter(function(value, index, all) { return value && all.indexOf(value) === index; }) : [];
+      if (candidates.length) {
+        const subtitles = this._siteSubtitlesDisabled() ? [] : (data.subtitleUrl ? [{file: this.absolute(base, data.subtitleUrl), label: "사이트 자막"}] : []);
+        const videos = [];
+        for (let index = 0; index < candidates.length; index += 1) {
+          const value = candidates[index];
+          const stream = this.absolute(base, value);
+          const quality = index === 0 ? "자동 (HLS)" : "보조 영상";
+          const expanded = await this._expandHls(stream, pageUrl, quality);
+          for (const item of expanded) {
+            videos.push({url: item.url, originalUrl: this._hlsOriginalUrl(item.url), quality: item.quality, headers: {Referer: pageUrl, Origin: base}, subtitles, audios: []});
+          }
         }
+        if (videos.length) return videos;
       }
-      if (videos.length) return videos;
-    }
 
-    // 2. Fallback to underlying sources (tvwiki, linkkf, etc.)
-    const query = this._parseQueryParams(url);
-    const sourceType = (query.st || "").toLowerCase();
-    const sourceUrl = query.su || "";
-
-    if (sourceType === "tvwiki" || sourceUrl.startsWith("tvwiki://")) {
-      try {
-        const tvwikiVideos = await this._resolveTvwikiSource(sourceUrl, info.episode);
-        if (tvwikiVideos && tvwikiVideos.length) return tvwikiVideos;
-      } catch (err) {
-        lastError = err;
-      }
+      // 4. Clean transport state and return empty array (triggers clean 502 no-streams in MOA)
+      await this._clearTransportFailure();
+      return [];
+    } catch (_) {
+      await this._clearTransportFailure();
+      return [];
     }
-
-    if (sourceType === "linkkf" || /linkkf\.(?:tv|app|com|net)/i.test(sourceUrl)) {
-      try {
-        const linkkfVideos = await this._resolveLinkkfSource(sourceUrl, info.episode);
-        if (linkkfVideos && linkkfVideos.length) return linkkfVideos;
-      } catch (err) {
-        lastError = err;
-      }
-    }
-
-    const errorMsg = lastError ? (lastError.message || String(lastError)) : "재생 주소를 불러오지 못했습니다.";
-    if (errorMsg.includes("PLAYBACK_FORBIDDEN") || errorMsg.includes("403")) {
-      throw new Error("애니라이프 재생 서버 권한 만료 (PLAYBACK_FORBIDDEN) · 해당 작품은 TVWiki 또는 Linkkf 확장 프로그램에서 시청해 주세요.");
-    }
-    throw new Error(errorMsg);
   }
 
   formatEpisode(number) { const value = Number(number); return Number.isInteger(value) ? String(value) : this._text(number); }
