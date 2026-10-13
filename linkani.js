@@ -11,7 +11,7 @@ const mangayomiSources = [{
   hasCloudflare: false,
   sourceCodeUrl: "https://raw.githubusercontent.com/wsun1023/mangayomi/main/linkani.js",
   apiUrl: "",
-  version: "0.1.0",
+  version: "0.1.1",
   isManga: false,
   itemType: 1,
   isFullData: false,
@@ -19,7 +19,7 @@ const mangayomiSources = [{
   additionalParams: "",
   sourceCodeLanguage: 1,
   pkgPath: "anime/src/ko/linkani.js",
-  notes: "https://linkani.tv 신규 지원 · 인기(TOP 일간) 및 최신 업데이트 연동 · 요일/장르/연도/형식 필터 지원 · MacCMS HLS 자동 해석 및 다중 화질 스트리밍 · 포스터 이미지 CDN 우회 · 한국어/일본어 원제 표시 옵션"
+  notes: "국내 통신사 SNI 차단 자동 우회(jina reader CDN) 연동으로 목록 및 작품 정상 표시 · 인기(TOP 일간) 및 최신 업데이트 연동 · 요일/장르/연도/형식 필터 지원 · MacCMS HLS 자동 해석 및 다중 화질 스트리밍 · 포스터 이미지 CDN 우회 · 한국어/일본어 원제 표시 옵션"
 }];
 
 class DefaultExtension extends MProvider {
@@ -61,6 +61,22 @@ class DefaultExtension extends MProvider {
   }
   _setPreferenceString(key, value) {
     try { new SharedPreferences().setString(key, this._text(value)); } catch (_) {}
+  }
+
+  _proxyMode() {
+    const pref = this._text(this._preference("linkani_proxy_mode", this._preferenceString("linkani_proxy_mode", "auto"))).trim().toLowerCase();
+    return pref === "direct" || pref === "always" ? pref : "auto";
+  }
+
+  _isBlockedDomain(url) {
+    const text = this._text(url).toLowerCase();
+    return text.includes("linkani.tv") || text.includes("linkkf.tv");
+  }
+
+  _toProxiedUrl(url) {
+    const text = this._text(url).trim();
+    if (!text) return "";
+    return "https://r.jina.ai/" + text;
   }
 
   _siteSubtitlesDisabled() {
@@ -109,6 +125,48 @@ class DefaultExtension extends MProvider {
   }
 
   async _requestText(url, referer, timeout) {
+    const proxyMode = this._proxyMode();
+    const isTargetBlocked = this._isBlockedDomain(url);
+    const manualDomain = this._text(this._preference("linkani_domain_url", "")).trim();
+    const preferDirect = proxyMode === "direct" || (Boolean(manualDomain) && !this._isBlockedDomain(manualDomain));
+
+    if (!isTargetBlocked || preferDirect) {
+      try {
+        const headers = this.getHeaders(url);
+        if (referer) headers.Referer = referer;
+        const response = await this._clientGet(url, headers, timeout || 15);
+        if (response && response.statusCode >= 200 && response.statusCode < 300) {
+          const body = this._text(response.body);
+          if (!body.includes("warninge.kcopa.or.kr") && !body.includes("warning.or.kr")) {
+            return body;
+          }
+        }
+      } catch (err) {
+        if (proxyMode === "direct") throw err;
+      }
+    }
+
+    // SNI Bypass Proxy for Linkani
+    if (isTargetBlocked || proxyMode === "always" || !preferDirect) {
+      try {
+        const proxied = this._toProxiedUrl(url);
+        const pHeaders = {
+          "User-Agent": this.userAgent,
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+          "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
+          "X-Return-Format": "html"
+        };
+        const pRes = await this._clientGet(proxied, pHeaders, timeout || 20);
+        if (pRes && pRes.statusCode >= 200 && pRes.statusCode < 400) {
+          const body = this._text(pRes.body);
+          if (body && !body.includes("warninge.kcopa.or.kr")) {
+            return body;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Fallback: direct attempt
     const headers = this.getHeaders(url);
     if (referer) headers.Referer = referer;
     const response = await this._clientGet(url, headers, timeout || 15);
@@ -126,7 +184,7 @@ class DefaultExtension extends MProvider {
       const join = this.signalUrl.indexOf("?") >= 0 ? "&" : "?";
       const body = await this._requestText(this.signalUrl + join + "linkani=" + Date.now(), this.signalUrl, 8);
       const data = JSON.parse(body);
-      const candidate = this._trimSlash(data && data.domains && (data.domains.linkani || data.domains.linkkf) && (data.domains.linkani?.baseUrl || data.domains.linkkf?.baseUrl));
+      const candidate = this._trimSlash(data && data.domains && data.domains.linkani && data.domains.linkani.baseUrl);
       if (this._isHttpsOrigin(candidate)) {
         this._setPreferenceString("linkani_resolved_base", candidate);
         this._setPreferenceString("linkani_resolved_base_time", String(Date.now()));
@@ -676,6 +734,16 @@ class DefaultExtension extends MProvider {
 
   getSourcePreferences() {
     return [
+      {
+        key: "linkani_proxy_mode",
+        listPreference: {
+          title: "국내 통신사 SNI 차단 우회",
+          summary: "기본값은 자동 우회(권장)입니다. 국내 ISP 차단 환경에서도 목록을 즉시 불러옵니다. 해외 거주자나 VPN 사용자는 '직접 연결'을 선택할 수 있습니다.",
+          valueIndex: 0,
+          entries: ["자동 우회 (권장)", "항상 우회", "직접 연결 (VPN)"],
+          entryValues: ["auto", "always", "direct"]
+        }
+      },
       {
         key: "linkani_title_language_v2",
         listPreference: {
