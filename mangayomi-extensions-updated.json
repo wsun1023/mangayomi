@@ -44,26 +44,26 @@
     "notes": "인기/최신탭 1번 미디어 요일카드 · 커스텀 목록 카드 · 공용 이벤트 카드 · 실시간 원본 직결 · 목록 캐시 최적화"
   },
   {
-    "name": "Linkkf 애니",
+    "name": "링크애니",
     "id": 780920260910801,
-    "baseUrl": "https://linkkf.tv",
+    "baseUrl": "https://linkani.tv",
     "lang": "ko",
     "typeSource": "single",
     "iconUrl": "https://dc-toki-mangayomi-media.pages.dev/icon/ko.linkkf-anime.png",
     "dateFormat": "",
     "dateFormatLocale": "",
-    "isNsfw": true,
+    "isNsfw": false,
     "hasCloudflare": false,
-    "sourceCodeUrl": "https://dc-toki-mangayomi-media.pages.dev/javascript/anime/src/ko/linkkf.js",
+    "sourceCodeUrl": "https://raw.githubusercontent.com/wsun1023/mangayomi/main/linkani.js",
     "apiUrl": "",
-    "version": "0.1.14",
+    "version": "0.1.0",
     "isManga": false,
     "itemType": 1,
     "isFullData": false,
     "appMinVerReq": "0.9.2",
     "additionalParams": "",
     "sourceCodeLanguage": 1,
-    "notes": "목록·상세 제목 한국어/일본어 전환 · 제목 언어 설정 캐시 키 갱신 · Anissia 일본어 원제 우선 + AniList 보조 · 새로고침 즉시 반영 · 기본 설정 · Popular: TOP 오늘 · Latest: Anime 전체 조건 · 필터 규칙 저장 · 커스텀 목록 카드 · 공용 이벤트 카드 · 사이트 자막 끄기 옵션 · 재생 서버 병렬 확인 · 중앙신호등 주소 자동 적용"
+    "notes": "https://linkani.tv 신규 지원 · 인기(TOP 일간) 및 최신 업데이트 연동 · 요일/장르/연도/형식 필터 지원 · MacCMS HLS 자동 해석 및 다중 화질 스트리밍 · 포스터 이미지 CDN 우회 · 한국어/일본어 원제 표시 옵션"
   },
   {
     "name": "애니24",
