@@ -98,7 +98,7 @@
     "dateFormatLocale": "",
     "isNsfw": false,
     "hasCloudflare": false,
-    "sourceCodeUrl": "https://dc-toki-mangayomi-media.pages.dev/javascript/anime/src/ko/anilife.js",
+    "sourceCodeUrl": "https://raw.githubusercontent.com/wsun1023/mangayomi/main/anilife.js",
     "apiUrl": "",
     "version": "0.1.13",
     "isManga": false,
