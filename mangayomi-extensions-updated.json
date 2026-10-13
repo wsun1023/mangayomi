@@ -100,14 +100,14 @@
     "hasCloudflare": false,
     "sourceCodeUrl": "https://raw.githubusercontent.com/wsun1023/mangayomi/main/anilife.js",
     "apiUrl": "",
-    "version": "0.1.14",
+    "version": "0.1.15",
     "isManga": false,
     "itemType": 1,
     "isFullData": false,
     "appMinVerReq": "0.9.2",
     "additionalParams": "",
     "sourceCodeLanguage": 1,
-    "notes": "포스터 이미지 wsrv.nl CDN 프록시 적용(국내 방심위 차단 우회) · RHTTP/Dart 듀얼 클라이언트 안정화 · TVWiki/Linkkf 다중 소스 재생 폴백 연동 · 목록·상세 10분 캐시 · 실제 회차 번호 유지 · 사이트 자막 토글 · 중앙신호등 주소 자동 동기화"
+    "notes": "포스터 이미지 wsrv.nl CDN 프록시 적용(국내 방심위 차단 우회) · RHTTP/Dart 듀얼 클라이언트 안정화 · TVWiki 다중 소스 재생 폴백 연동 · MOA internal-error 500 예외 방어 및 no-streams 정상 반환 · 목록·상세 10분 캐시 · 실제 회차 번호 유지 · 사이트 자막 토글 · 중앙신호등 주소 자동 동기화"
   },
     {
     "name": "re:ainme",
