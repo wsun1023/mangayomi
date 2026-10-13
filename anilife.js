@@ -11,7 +11,7 @@ const mangayomiSources = [{
   hasCloudflare: false,
   sourceCodeUrl: "https://raw.githubusercontent.com/wsun1023/mangayomi/main/anilife.js",
   apiUrl: "",
-  version: "0.1.15",
+  version: "0.1.16",
   isManga: false,
   itemType: 1,
   isFullData: false,
@@ -19,119 +19,8 @@ const mangayomiSources = [{
   additionalParams: "",
   sourceCodeLanguage: 1,
   pkgPath: "anime/src/ko/anilife.js",
-  notes: "포스터 이미지 wsrv.nl CDN 프록시 적용(국내 방심위 차단 우회) · RHTTP/Dart 듀얼 클라이언트 안정화 · TVWiki 다중 소스 재생 폴백 연동 · MOA internal-error 500 예외 방어 및 no-streams 정상 반환 · 목록·상세 10분 캐시 · 실제 회차 번호 유지 · 사이트 자막 토글 · 중앙신호등 주소 자동 동기화"
+  notes: "목록 로딩 안정화(인메모리 캐시 전환으로 MOA 48KB 제한 방어) · 더미 카드 제거로 작품 정보 불러오기 오류 해결 · 요일/완결/분기/전체탐색 필터 정상화 · 라이브 사이트 v=catalog-media-2 규격 동기화 · 포스터 이미지 wsrv.nl CDN 우회 · TVWiki/Linkkf 다중 소스 재생 연동"
 }];
-
-function dcResolveListCardManifest(data, scope, tab) {
-  const source = data && typeof data === "object" ? data : {};
-  const currentScope = String(scope || "default").trim().toLowerCase();
-  const currentTab = String(tab || "all").trim().toLowerCase();
-  const groupByScope = {
-    xtoon: "manga", toon11: "manga", goodtoon: "manga", blacktoon: "manga", wolf_manga: "manga", wolf_webtoon: "manga",
-    ani24: "media", anilife: "media", dc_iptv: "media", dc_live: "media", samsung_tv_plus: "media", linkkf_anime: "media", tvroom: "media",
-    toki31_novel: "novel"
-  };
-  const currentGroup = groupByScope[currentScope] || "";
-  const values = function(value) {
-    if (Array.isArray(value)) return value.map(function(item) { return String(item || "").trim().toLowerCase(); }).filter(Boolean);
-    const one = String(value || "").trim().toLowerCase();
-    return one ? [one] : [];
-  };
-  let selected = null, selectedIndex = -1, selectedScore = -Infinity;
-  const rules = Array.isArray(source.rules) ? source.rules : [];
-  for (let index = 0; index < rules.length; index++) {
-    const rule = rules[index];
-    if (!rule || typeof rule !== "object" || rule.enabled === false) continue;
-    const match = rule.match && typeof rule.match === "object" ? rule.match : {};
-    const targets = values(rule.targets || rule.extensions || rule.scopes || match.targets || match.extensions || match.scopes);
-    const groups = values(rule.groups || match.groups);
-    const tabs = values(rule.tabs || rule.tab || match.tabs || match.tab);
-    let targetScore = 0;
-    if (targets.length) {
-      if (targets.indexOf(currentScope + ":" + currentTab) >= 0) targetScore = 600;
-      else if (targets.indexOf(currentScope) >= 0) targetScore = 500;
-      else continue;
-    } else if (groups.length) {
-      if (!currentGroup || groups.indexOf(currentGroup) < 0) continue;
-      targetScore = 300;
-    }
-    let tabScore = 0;
-    if (tabs.length && tabs.indexOf("*") < 0 && tabs.indexOf("all") < 0 && tabs.indexOf("both") < 0) {
-      if (tabs.indexOf(currentTab) < 0) continue;
-      tabScore = 50;
-    }
-    const priority = Number(rule.priority) || 0;
-    const score = priority * 10000 + targetScore + tabScore;
-    if (score > selectedScore) { selected = rule; selectedIndex = index; selectedScore = score; }
-  }
-  const selectedCards = selected && Array.isArray(selected.cards) && selected.cards.length ? selected.cards : source.cards;
-  const rootRotation = source.rotation && typeof source.rotation === "object" ? source.rotation : {};
-  const ruleRotation = selected && selected.rotation && typeof selected.rotation === "object" ? selected.rotation : {};
-  const revisionParts = [source.revision];
-  if (selected) revisionParts.push(selected.revision, selected.id || ("rule-" + selectedIndex));
-  return {
-    cards: Array.isArray(selectedCards) ? selectedCards : [],
-    name: String(selected && (selected.name || selected.title) || source.name || source.title || "").trim(),
-    revision: revisionParts.map(function(value) { return String(value || "").trim(); }).filter(Boolean).join(":"),
-    rotation: Object.assign({}, rootRotation, ruleRotation)
-  };
-}
-
-async function dcOfficialListCardSystem(scope, tab, defaultName) {
-  if (defaultName === undefined) { defaultName = tab; tab = "all"; }
-  const assetBaseUrl = "https://dc-toki-mangayomi-novel.pages.dev";
-  const manifestUrl = assetBaseUrl + "/assets/official-random-cards.json";
-  let data = null;
-  try {
-    const response = await new Client({ persistentConnection: false, noProxy: true, timeout: 8, connectTimeout: 5 }).get(
-      manifestUrl + "?card_manifest=" + Date.now(),
-      { Accept: "application/json, text/plain, */*", Referer: assetBaseUrl + "/", "Cache-Control": "no-cache" }
-    );
-    if (response && response.statusCode >= 200 && response.statusCode < 300) data = JSON.parse(String(response.body || ""));
-  } catch (_) {}
-  const config = dcResolveListCardManifest(data, scope, tab);
-  const revision = config.revision;
-  let cards = config.cards.map(function(value) {
-    const rawUrl = typeof value === "string" ? value : value && (value.imageUrl || value.image || value.url);
-    let imageUrl = String(rawUrl || "").trim();
-    if (imageUrl.startsWith("/")) imageUrl = assetBaseUrl + imageUrl;
-    if (imageUrl.toLowerCase().indexOf("https://") !== 0) return null;
-    if (revision) imageUrl += (imageUrl.indexOf("?") >= 0 ? "&" : "?") + "revision=" + encodeURIComponent(revision);
-    return { name: String(typeof value === "object" && value && (value.name || value.title) || config.name || defaultName || "오늘의 한 장").trim(), imageUrl: imageUrl };
-  }).filter(Boolean);
-  if (!cards.length) {
-    cards = Array.from({ length: 20 }, function(_, offset) {
-      return { name: defaultName || "오늘의 한 장", imageUrl: assetBaseUrl + "/card/shared-random/card-" + String(offset + 1).padStart(2, "0") + ".jpg" };
-    });
-  }
-  const rotation = config.rotation;
-  const holdMinutes = String(rotation.mode || "").toLowerCase() === "interval" ? Math.max(1, Number(rotation.intervalMinutes) || 60) : 0;
-  const preferences = new SharedPreferences();
-  const safeScope = String(scope || "default").replace(/[^a-z0-9_-]/gi, "_");
-  const safeTab = String(tab || "all").replace(/[^a-z0-9_-]/gi, "_");
-  const key = "dc_list_card_system_last_" + safeScope + "_" + safeTab;
-  const timeKey = key + "_time";
-  const revisionKey = key + "_revision";
-  let previous = 0, previousAt = 0, previousRevision = "";
-  try {
-    previous = Number(preferences.getString(key, "0"));
-    previousAt = Number(preferences.getString(timeKey, "0"));
-    previousRevision = String(preferences.getString(revisionKey, "") || "");
-  } catch (_) {}
-  let index = previous;
-  const keepPrevious = holdMinutes > 0 && previous >= 1 && previous <= cards.length && previousAt > 0 && Date.now() - previousAt < holdMinutes * 60 * 1000 && previousRevision === revision;
-  if (!keepPrevious) {
-    index = Math.floor(Math.random() * cards.length) + 1;
-    const avoidImmediateRepeat = rotation.avoidImmediateRepeat !== false;
-    if (avoidImmediateRepeat && cards.length > 1 && index === previous) index = index % cards.length + 1;
-    try {
-      preferences.setString(key, String(index));
-      preferences.setString(timeKey, String(Date.now()));
-      preferences.setString(revisionKey, revision);
-    } catch (_) {}
-  }
-  return cards[Math.max(1, Math.min(cards.length, index || 1)) - 1];
-}
 
 class DefaultExtension extends MProvider {
   constructor() {
@@ -146,6 +35,7 @@ class DefaultExtension extends MProvider {
     this.titleLanguagePreference = "anilife_title_language_v2";
     this.titleCachePrefix = "anilife_title_meta_v3_";
     this.userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
+    this._memCache = new Map();
   }
 
   get supportsLatest() { return true; }
@@ -448,36 +338,10 @@ class DefaultExtension extends MProvider {
     if (!raw) return this._normalizeCriteria(fallback, fallback);
     try { return this._normalizeCriteria(JSON.parse(raw), fallback); } catch (_) { return this._normalizeCriteria(fallback, fallback); }
   }
-  _nameFor(pairs, value, fallback) {
-    const item = pairs.find(function(pair) { return pair[1] === value; });
-    return item ? item[0] : fallback;
-  }
-  _ruleSummary(rule) {
-    const r = this._normalizeCriteria(rule);
-    const parts = [this._nameFor(this.scopeOptions, r.scope, "전체 작품")];
-    if (r.format) parts.push(this._nameFor(this.formatOptions, r.format, r.format));
-    if (r.status) parts.push(r.status);
-    if (r.day) parts.push(this._nameFor(this.dayOptions, r.day, r.day));
-    if (r.year) parts.push(r.year + "년");
-    if (r.genre) parts.push(r.genre);
-    parts.push(this._nameFor(this.sortOptions, r.sort, "최신순"));
-    return parts.join(" · ");
-  }
-  _applyTabRuleAction(page, filters, rule) {
-    if (Number(page) !== 1) return;
-    const action = Number(this._filterValue(filters, "tabRuleAction", "0"));
-    if (action === 1) this._setPreferenceString(this.popularRulePreference, JSON.stringify(rule));
-    else if (action === 2) this._setPreferenceString(this.latestRulePreference, JSON.stringify(rule));
-    else if (action === 3) this._setPreferenceString(this.popularRulePreference, "");
-    else if (action === 4) this._setPreferenceString(this.latestRulePreference, "");
-    else if (action === 5) { this._setPreferenceString(this.popularRulePreference, ""); this._setPreferenceString(this.latestRulePreference, ""); }
-  }
 
   getFilterList() {
     const separator = (type) => ({type, name: "", type_name: "SeparatorFilter"});
     const header = (type, name) => ({type, name, type_name: "HeaderFilter"});
-    const popular = this._tabRule(this.popularRulePreference, this._defaultPopularRule());
-    const latest = this._tabRule(this.latestRulePreference, this._defaultLatestRule());
     return [
       header("filterHelp", "원하는 조건만 선택하세요. 선택하지 않은 항목은 전체로 처리하며 여러 조건은 함께 적용됩니다."),
       this._select("scope", "목록 종류", this.scopeOptions),
@@ -488,16 +352,7 @@ class DefaultExtension extends MProvider {
       this._select("genre", "주요 장르", [["전체", ""]].concat(this.genreOptions)),
       separator("sortSeparator"),
       this._select("sort", "정렬", this.sortOptions),
-      header("genreHelp", "제목·원제·제작사·감독도 검색창에서 함께 검색됩니다."),
-      separator("saveSeparator"),
-      header("cardHelp", "미디어 요일 카드는 Popular/Latest 첫 페이지에만 표시되며 검색·필터 결과에서는 숨깁니다."),
-      header("popularSummary", "현재 Popular: " + this._ruleSummary(popular)),
-      header("latestSummary", "현재 Latest: " + this._ruleSummary(latest)),
-      this._select("tabRuleAction", "Popular/Latest 규칙", [
-        ["저장하지 않음 (필터 결과만 보기)", "0"], ["현재 조건을 Popular 탭에 저장", "1"],
-        ["현재 조건을 Latest 탭에 저장", "2"], ["Popular 탭을 기본값으로 복원", "3"],
-        ["Latest 탭을 기본값으로 복원", "4"], ["두 탭 모두 기본값으로 복원", "5"]
-      ], false)
+      header("genreHelp", "제목·원제·제작사·감독도 검색창에서 함께 검색됩니다.")
     ];
   }
 
@@ -505,7 +360,6 @@ class DefaultExtension extends MProvider {
     return [
       {key: "anilife_title_language_v2", listPreference: {title: "작품 제목 언어", summary: "한국어와 일본어 중에서 선택합니다. 변경 후 현재 화면을 새로고침하세요. Anissia에서 매칭되지 않는 작품은 한국어를 유지합니다.", valueIndex: 0, entries: ["한국어", "일본어"], entryValues: ["ko", "ja"]}},
       {key: "anilife_domain_url", editTextPreference: {title: "애니라이프 주소 직접 지정 (선택)", summary: "빈 값이면 토끼 중앙신호등에 등록된 주소를 사용합니다.", value: "", dialogTitle: "애니라이프 주소", dialogMessage: "https://로 시작하는 사이트 주소를 입력하세요. 자동 주소를 쓰려면 비워 두세요."}},
-      {key: "anilife_custom_card_json_url", editTextPreference: {title: "커스텀 목록 카드 (선택)", summary: "개인 JSON 주소로 요일별 카드 7장을 설정합니다. 설정한 사용자는 공용 이벤트 카드가 표시되지 않습니다.", value: "", dialogTitle: "커스텀 목록 카드 JSON 주소", dialogMessage: "Google Drive 공개 공유 링크 또는 직접 JSON 주소를 넣으세요. 비워 두면 공용 이벤트 또는 기본 미디어 요일 카드가 표시됩니다."}},
       {key: "anilife_disable_site_subtitles", switchPreferenceCompat: {title: "사이트 자막 끄기", summary: "기본은 꺼짐. 켜면 사이트가 제공하는 외부 자막을 플레이어에 전달하지 않습니다. 영상에 포함된 자막은 제거되지 않습니다.", value: false}}
     ];
   }
@@ -518,7 +372,8 @@ class DefaultExtension extends MProvider {
   }
   contentUrl(base, id, episode) { return this._trimSlash(base) + "/content/" + id + "/" + (episode || 1); }
   idFromUrl(url) {
-    const match = this._text(url).match(/\/content\/(\d+)(?:\/|$)/);
+    const text = this._text(url).trim();
+    const match = text.match(/\/content\/(\d+)(?:\/|$)/) || text.match(/\/(\d+)(?:\/|$)/);
     if (!match) throw new Error("작품 주소에서 ID를 찾지 못했습니다: " + url);
     return match[1];
   }
@@ -615,7 +470,9 @@ class DefaultExtension extends MProvider {
 
   _proxyApiUrl(base, apiUrl) {
     const path = this._text(apiUrl).replace(/^https?:\/\/[^/]+/i, "");
-    if (!/^\/api\/(?:anime(?:\/\d+)?|playback\/\d+\/\d+)(?:\?|$)/.test(path)) throw new Error("허용되지 않은 애니라이프 API 주소입니다.");
+    if (!/^\/api\/(?:anime(?:\/\d+)?|playback\/\d+\/\d+|bootstrap|directory|meta)(?:\?|$)/.test(path)) {
+      throw new Error("허용되지 않은 애니라이프 API 주소입니다.");
+    }
     const join = path.indexOf("?") >= 0 ? "&" : "?";
     return this.assetBaseUrl + "/anilife-api" + path.slice(4) + join + "origin=" + encodeURIComponent(this._trimSlash(base));
   }
@@ -632,94 +489,16 @@ class DefaultExtension extends MProvider {
     return (hash >>> 0).toString(16);
   }
   async _cachedJson(namespace, apiUrl, ttl) {
-    const key = "anilife_cache_" + namespace + "_" + this._cacheToken(apiUrl);
-    const timeKey = key + "_time";
-    const cached = this._preferenceString(key, "");
-    const cachedAt = Number(this._preferenceString(timeKey, "0"));
-    if (cached && cachedAt > 0 && Date.now() - cachedAt < ttl) {
-      try { return JSON.parse(cached); } catch (_) {}
+    const key = namespace + "_" + this._cacheToken(apiUrl);
+    const cached = this._memCache.get(key);
+    if (cached && Date.now() - cached.time < (ttl || this.cacheMs)) {
+      return cached.data;
     }
-    try {
-      const data = await this.proxyJson(this._origin(apiUrl) || this.fallbackBaseUrl, apiUrl);
-      this._setPreferenceString(key, JSON.stringify(data));
-      this._setPreferenceString(timeKey, String(Date.now()));
-      return data;
-    } catch (error) {
-      if (cached) { try { return JSON.parse(cached); } catch (_) {} }
-      throw error;
+    const data = await this.proxyJson(this._origin(apiUrl) || this.fallbackBaseUrl, apiUrl);
+    if (data && typeof data === "object") {
+      this._memCache.set(key, { time: Date.now(), data });
     }
-  }
-
-  _koreaWeekday() {
-    return ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][new Date(Date.now() + 9 * 60 * 60 * 1000).getUTCDay()];
-  }
-  _weekdayName(slug) {
-    return ({monday: "월요일", tuesday: "화요일", wednesday: "수요일", thursday: "목요일", friday: "금요일", saturday: "토요일", sunday: "일요일"})[slug] || "오늘";
-  }
-  _driveDirect(url, image) {
-    const value = this._text(url).trim();
-    const match = value.match(/drive\.google\.com\/file\/d\/([^/]+)/i);
-    return match ? "https://drive.google.com/uc?export=" + (image ? "view" : "download") + "&id=" + match[1] : value;
-  }
-  _customCardSource() { return this._text(this._preference("anilife_custom_card_json_url", "")).trim(); }
-  async _customCardUrl(slug, source) {
-    if (!source) return "";
-    const cacheKey = "anilife_custom_card_cache", sourceKey = cacheKey + "_source", timeKey = cacheKey + "_time";
-    let data = null;
-    const cached = this._preferenceString(sourceKey, "") === source ? this._preferenceString(cacheKey, "") : "";
-    const cachedAt = Number(this._preferenceString(timeKey, "0"));
-    if (cached && cachedAt > 0 && Date.now() - cachedAt < 5 * 60 * 1000) { try { data = JSON.parse(cached); } catch (_) {} }
-    if (!data) {
-      try {
-        const direct = this._driveDirect(source, false), join = direct.indexOf("?") >= 0 ? "&" : "?";
-        data = JSON.parse(await this._requestText(direct + join + "card_json=" + Date.now(), source, 10));
-        this._setPreferenceString(cacheKey, JSON.stringify(data));
-        this._setPreferenceString(sourceKey, source);
-        this._setPreferenceString(timeKey, String(Date.now()));
-      } catch (_) { if (cached) { try { data = JSON.parse(cached); } catch (_) {} } }
-    }
-    if (!data || typeof data !== "object") return "";
-    const cards = data.cards && typeof data.cards === "object" ? data.cards : {};
-    let image = this._text(cards[slug] || data.default || data.card).trim();
-    if (!image) return "";
-    image = this._driveDirect(image, true);
-    if (data.revision !== undefined && this._text(data.revision).trim()) image += (image.indexOf("?") >= 0 ? "&" : "?") + "revision=" + encodeURIComponent(this._text(data.revision));
-    return image;
-  }
-  _parseTime(value) {
-    if (!value) return null;
-    const time = Date.parse(this._text(value));
-    return Number.isFinite(time) ? time : null;
-  }
-  async _activeEventCard() {
-    try {
-      const join = this.eventManifestUrl.indexOf("?") >= 0 ? "&" : "?";
-      const data = JSON.parse(await this._requestText(this.eventManifestUrl + join + "event_manifest=" + Date.now(), this.eventManifestUrl, 8));
-      if (!data || data.enabled !== true) return null;
-      const now = Date.now(), startsAt = this._parseTime(data.startsAt), endsAt = this._parseTime(data.endsAt);
-      if (startsAt !== null && now < startsAt) return null;
-      if (endsAt !== null && now >= endsAt) return null;
-      const imageUrl = this._text(data.imageUrl || data.image).trim();
-      if (!/^https:\/\//i.test(imageUrl)) return null;
-      const revision = this._text(data.revision).trim();
-      return {name: this._text(data.name || data.title || "특별 이벤트").trim(), imageUrl: imageUrl + (revision ? (imageUrl.indexOf("?") >= 0 ? "&" : "?") + "revision=" + encodeURIComponent(revision) : "")};
-    } catch (_) { return null; }
-  }
-  async _tabCard(slug, tab) {
-    const day = slug || this._koreaWeekday();
-    const customSource = this._customCardSource();
-    if (customSource) {
-      const customImage = await this._customCardUrl(day, customSource);
-      if (customImage) return {name: this._weekdayName(day), link: "/__anilife_weekday_card__/" + day, imageUrl: customImage};
-    }
-    const event = customSource ? null : await this._activeEventCard();
-    if (event) return {name: event.name, link: "/__anilife_event_card__/official", imageUrl: event.imageUrl};
-    const official = await dcOfficialListCardSystem("anilife", tab, "오늘의 애니");
-    return {name: official.name, link: "/__anilife_weekday_card__/" + day, imageUrl: official.imageUrl};
-  }
-  async _prependCard(result, page, tab) {
-    if (Number(page) !== 1) return result;
-    return {list: [await this._tabCard(undefined, tab)].concat(result.list || []), hasNextPage: result.hasNextPage === true};
+    return data;
   }
 
   toListItem(base, item) {
@@ -731,41 +510,89 @@ class DefaultExtension extends MProvider {
       __dcTitleMeta: this._titleBridgeMetadataFromItem(original, item)
     };
   }
+
   async catalog(page, criteria, query) {
     const base = await this._resolveBaseUrl();
     const rule = this._normalizeCriteria(criteria);
-    const params = ["page=" + encodeURIComponent(page), "limit=24", "sort=" + encodeURIComponent(rule.sort), "v=mangayomi-anilife-v1"];
+    const params = ["page=" + encodeURIComponent(page), "limit=24", "sort=" + encodeURIComponent(rule.sort), "v=catalog-media-2"];
     if (rule.scope) params.push("scope=" + encodeURIComponent(rule.scope));
     if (query) params.push("q=" + encodeURIComponent(query));
-    for (const key of ["format", "status", "day", "year", "genre"]) if (rule[key]) params.push(key + "=" + encodeURIComponent(rule[key]));
+    if (rule.day) {
+      params.push("day=" + encodeURIComponent(rule.day));
+      if (!rule.status) params.push("status=" + encodeURIComponent("방영중"));
+    }
+    if (rule.format) params.push("format=" + encodeURIComponent(rule.format));
+    if (rule.status && !rule.day) params.push("status=" + encodeURIComponent(rule.status));
+    if (rule.year) params.push("year=" + encodeURIComponent(rule.year));
+    if (rule.genre) params.push("genre=" + encodeURIComponent(rule.genre));
+
     const apiUrl = base + "/api/anime?" + params.join("&");
-    const data = await this._cachedJson("list", apiUrl, this.cacheMs);
-    const items = Array.isArray(data.items) ? data.items : [];
-    const pagination = data.pagination || {};
-    return {list: items.map((item) => this.toListItem(base, item)), hasNextPage: Number(pagination.page || page) < Number(pagination.pages || 1)};
+    let data = null;
+    try {
+      data = await this._cachedJson("list", apiUrl, this.cacheMs);
+    } catch (_) {
+      await this._clearTransportFailure();
+      return { list: [], hasNextPage: false };
+    }
+    const items = Array.isArray(data && data.items) ? data.items : [];
+    const pagination = (data && data.pagination) || {};
+    const list = items.map((item) => this.toListItem(base, item));
+    await this._clearTransportFailure();
+    return {
+      list,
+      hasNextPage: Number(pagination.page || page) < Number(pagination.pages || 1)
+    };
   }
-  async getPopular(page) { return this._localizeResult(await this._prependCard(await this.catalog(page, this._tabRule(this.popularRulePreference, this._defaultPopularRule()), ""), page, "popular")); }
-  async getLatestUpdates(page) { return this._localizeResult(await this._prependCard(await this.catalog(page, this._tabRule(this.latestRulePreference, this._defaultLatestRule()), ""), page, "latest")); }
+
+  async getPopular(page) {
+    const result = await this.catalog(page, this._tabRule(this.popularRulePreference, this._defaultPopularRule()), "");
+    return this._localizeResult(result);
+  }
+
+  async getLatestUpdates(page) {
+    const result = await this.catalog(page, this._tabRule(this.latestRulePreference, this._defaultLatestRule()), "");
+    return this._localizeResult(result);
+  }
+
   async search(query, page, filters) {
     const criteria = this._filterCriteria(filters);
     const result = await this.catalog(page, criteria, this._text(query).trim());
-    this._applyTabRuleAction(page, filters, criteria);
     return this._localizeResult(result);
   }
 
   async getDetail(url) {
     const card = this._text(url).match(/\/__anilife_(weekday|event)_card__\/(\w+)/);
     if (card) {
-      const item = card[1] === "event" ? await this._tabCard() : await this._tabCard(card[2]);
-      return {name: item.name, link: item.link, imageUrl: item.imageUrl, author: "애니라이프", artist: "", description: "목록을 구분하는 안내 카드입니다. 뒤로 돌아가 작품을 선택해 주세요.", genre: [card[1] === "event" ? "이벤트 안내" : "요일 안내"], status: 0, episodes: [], chapters: []};
+      return {
+        name: "안내 카드",
+        link: this._text(url),
+        imageUrl: "",
+        author: "애니라이프",
+        artist: "",
+        description: "안내 카드입니다. 목록에서 작품을 선택해 주세요.",
+        genre: ["안내"],
+        status: 0,
+        episodes: [{ name: "1화 . 안내", url: this._text(url), dateUpload: "", scanlator: "", isFiller: false }],
+        chapters: [{ name: "1화 . 안내", url: this._text(url), dateUpload: "", scanlator: "", isFiller: false }]
+      };
     }
     const id = this.idFromUrl(url);
     const base = await this._resolveBaseUrl();
-    const data = await this._cachedJson("detail", base + "/api/anime/" + id + "?v=playback-policy-v2", this.cacheMs);
-    const item = data.item;
-    if (!item || String(item.id) !== id) throw new Error("작품 상세 응답이 올바르지 않습니다.");
-    const episodes = (Array.isArray(item.episodes) ? item.episodes : []).filter(function(episode) {
-      return episode && episode.playable === true && episode.playbackUrl;
+    let data = null;
+    try {
+      data = await this._cachedJson("detail", base + "/api/anime/" + id + "?v=playback-url-v1", this.cacheMs);
+    } catch (_) {
+      try {
+        data = await this._cachedJson("detail", base + "/api/anime/" + id + "?v=playback-policy-v2", this.cacheMs);
+      } catch (_) {}
+    }
+    const item = data && data.item;
+    if (!item) {
+      await this._clearTransportFailure();
+      throw new Error("작품 상세 응답이 올바르지 않습니다.");
+    }
+    let episodes = (Array.isArray(item.episodes) ? item.episodes : []).filter(function(episode) {
+      return episode && episode.playbackUrl;
     }).map((episode, index) => {
       const number = this.formatEpisode(episode.number || (index + 1));
       const originalName = this._text(episode.title).trim() || (number + "화");
@@ -787,8 +614,26 @@ class DefaultExtension extends MProvider {
         isFiller: false
       };
     });
+
+    if (!episodes.length) {
+      const totalCount = Number(item.numberOfEpisodes || item.playableEpisode || item.episode || 0);
+      if (totalCount > 0) {
+        episodes = Array.from({ length: totalCount }, (_, i) => {
+          const num = String(i + 1);
+          return {
+            name: num + "화",
+            url: this.absolute(base, "/api/playback/" + id + "/" + num),
+            dateUpload: "",
+            scanlator: "",
+            isFiller: false
+          };
+        });
+      }
+    }
+
     const people = [item.studio, item.director].map((value) => this._text(value).trim()).filter(Boolean);
     const detailLanguage = await this._freshDetailTitleLanguage();
+    await this._clearTransportFailure();
     return {
       name: await this._localizedTitle(item.title || ("작품 " + id), this._titleBridgeMetadataFromItem(item.title || ("작품 " + id), item), detailLanguage),
       link: this.contentUrl(base, id, 1),
@@ -890,7 +735,7 @@ class DefaultExtension extends MProvider {
       // 1. If sourceType or sourceUrl is missing from URL query, fetch from detail cache
       if (!sourceUrl || !sourceType) {
         try {
-          const detail = await this._cachedJson("detail", base + "/api/anime/" + info.animeId + "?v=playback-policy-v2", this.cacheMs);
+          const detail = await this._cachedJson("detail", base + "/api/anime/" + info.animeId + "?v=playback-url-v1", this.cacheMs);
           if (detail && detail.item) {
             if (!sourceUrl && detail.item.sourceUrl) sourceUrl = this._text(detail.item.sourceUrl).trim();
             if (!sourceType) {
@@ -905,14 +750,20 @@ class DefaultExtension extends MProvider {
       if (sourceType === "tvwiki" || sourceUrl.startsWith("tvwiki://") || /tvwiki/i.test(sourceUrl)) {
         try {
           const tvwikiVideos = await this._resolveTvwikiSource(sourceUrl, info.episode);
-          if (tvwikiVideos && tvwikiVideos.length) return tvwikiVideos;
+          if (tvwikiVideos && tvwikiVideos.length) {
+            await this._clearTransportFailure();
+            return tvwikiVideos;
+          }
         } catch (_) {}
       }
 
       if (sourceType === "linkkf" || /linkkf\.(?:tv|app|com|net)/i.test(sourceUrl)) {
         try {
           const linkkfVideos = await this._resolveLinkkfSource(sourceUrl, info.episode);
-          if (linkkfVideos && linkkfVideos.length) return linkkfVideos;
+          if (linkkfVideos && linkkfVideos.length) {
+            await this._clearTransportFailure();
+            return linkkfVideos;
+          }
         } catch (_) {}
       }
 
@@ -935,10 +786,13 @@ class DefaultExtension extends MProvider {
             videos.push({url: item.url, originalUrl: this._hlsOriginalUrl(item.url), quality: item.quality, headers: {Referer: pageUrl, Origin: base}, subtitles, audios: []});
           }
         }
-        if (videos.length) return videos;
+        if (videos.length) {
+          await this._clearTransportFailure();
+          return videos;
+        }
       }
 
-      // 4. Clean transport state and return empty array (triggers clean 502 no-streams in MOA)
+      // 4. Clean transport state and return empty array
       await this._clearTransportFailure();
       return [];
     } catch (_) {
