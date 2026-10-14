@@ -176,28 +176,6 @@
     "notes": "인기탭: 실시간 TV · 최신탭: 실시간 라디오 · 한글 정적 채널 카드 · 각 탭 첫 번째는 미디어 요일 카드 · 커스텀 목록 카드 · 공용 이벤트 카드 · 한글 UTF-8 복구 · 무기한 목록 캐시 · 재생 실패 시 자동 갱신"
   },
   {
-    "name": "티비위키",
-    "id": 780920260915001,
-    "baseUrl": "https://tvwiki53.net",
-    "lang": "ko",
-    "typeSource": "single",
-    "iconUrl": "https://dc-toki-mangayomi-media.pages.dev/icon/ko.tvwiki.png",
-    "dateFormat": "",
-    "dateFormatLocale": "",
-    "isNsfw": false,
-    "hasCloudflare": false,
-    "sourceCodeUrl": "https://raw.githubusercontent.com/wsun1023/mangayomi/main/tvwiki.js",
-    "apiUrl": "",
-    "version": "0.2.0",
-    "isManga": false,
-    "itemType": 1,
-    "isFullData": false,
-    "appMinVerReq": "0.9.3",
-    "additionalParams": "",
-    "sourceCodeLanguage": 1,
-    "notes": "최신 tvwiki53.net 도메인 반영 · 검색 카드 작품 설명 우선 · 회차형 최신 줄거리 제외 · 인기/최신 탭 규칙 저장 · 커스텀 목록 카드 · WebP 공용 랜덤 카드 · 목록 구분 카드 6종 · 주간 TOP 100 회차 전수 보강 · 작품명/특별편 누락 수정 · 순차 HTTP 요청으로 403 알림 억제 · 중앙신호등 최신 주소 · 빠른 CDN 직접 재생 + 호환 중계 재생"
-  },
-  {
     "name": "코티비씨",
     "id": 780920261014001,
     "baseUrl": "https://k03.kotbc2.com",
