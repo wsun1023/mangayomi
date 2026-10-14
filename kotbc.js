@@ -3,10 +3,10 @@ const mangayomiSources = [{
   lang: "ko", typeSource: "single", iconUrl: "https://k03.kotbc2.com/kotbc_favicon_v1.png",
   dateFormat: "", dateFormatLocale: "", isNsfw: false, hasCloudflare: false,
   sourceCodeUrl: "https://raw.githubusercontent.com/wsun1023/mangayomi/main/kotbc.js",
-  apiUrl: "", version: "0.1.0", isManga: false, itemType: 1, isFullData: false,
+  apiUrl: "", version: "0.1.1", isManga: false, itemType: 1, isFullData: false,
   appMinVerReq: "0.9.2", additionalParams: "", sourceCodeLanguage: 1,
   pkgPath: "anime/src/ko/kotbc.js",
-  notes: "사이트 직접 연결 · 인기(평점순)/최신/검색 · 영화/드라마/예능시사/해외드라마 · 장르/연도 필터 · 회차 전체 페이지 · 직접 영상/외부 플레이어/HLS"
+  notes: "재생 주소 발급/CSRF 세션/공식 플레이어 Referer 적용 · FirePlayer 영상 API/HLS 직접 연결 · 인기(평점순)/최신/검색 · 종류/장르/연도 필터 · 회차 전체 페이지"
 }];
 
 class DefaultExtension extends MProvider {
@@ -15,6 +15,7 @@ class DefaultExtension extends MProvider {
     this.defaultBase = "https://k03.kotbc2.com";
     this.userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
     this.client = new Client({timeout: 15, persistentConnection: false});
+    this.cookies = Object.create(null);
   }
   get supportsLatest() { return true; }
   get baseUrl() { return this._base(); }
@@ -76,14 +77,34 @@ class DefaultExtension extends MProvider {
     return text ? this._absolute(this._base() + "/", /^(?:https?:|\/)/i.test(text) ? text : "/storage/" + text) : "";
   }
   getHeaders(url) { return {"User-Agent": this.userAgent, Referer: (this._origin(url) || this._base()) + "/", Accept: "text/html, application/json, */*"}; }
-  async _request(url, referer) {
+  _saveCookies(url, headers) {
+    if (!headers) return;
+    let values;
+    for (const name of Object.keys(headers)) if (name.toLowerCase() === "set-cookie") values = headers[name];
+    if (!values) return;
+    const jar = this.cookies[this._origin(url)] || (this.cookies[this._origin(url)] = Object.create(null));
+    const rows = Array.isArray(values) ? values : this._text(values).split(/,(?=\s*[^;,=\s]+=)/);
+    for (const row of rows) {
+      const pair = this._text(row).split(";")[0].trim(), index = pair.indexOf("=");
+      if (index <= 0) continue;
+      const name = pair.slice(0, index), value = pair.slice(index + 1), expires = /;\s*expires\s*=\s*([^;]+)/i.exec(row);
+      if (!value || /;\s*max-age\s*=\s*0(?:;|$)/i.test(row) || expires && Date.parse(expires[1]) < Date.now()) delete jar[name];
+      else jar[name] = value;
+    }
+  }
+  async _request(url, referer, body, extraHeaders) {
     const headers = this.getHeaders(url);
     if (referer) headers.Referer = referer;
-    const response = await this.client.get(url, headers), status = Number(response && response.statusCode);
+    const jar = this.cookies[this._origin(url)];
+    if (jar && Object.keys(jar).length) headers.Cookie = Object.keys(jar).map(name => name + "=" + jar[name]).join("; ");
+    if (extraHeaders) Object.assign(headers, extraHeaders);
+    const response = body === undefined ? await this.client.get(url, headers) : await this.client.post(url, headers, body);
+    this._saveCookies(url, response && response.headers);
+    const status = Number(response && response.statusCode);
     if (!(status >= 200 && status < 300)) throw new Error((this._origin(url) === this._base() ? "코티비씨" : "코티비씨 영상 서버") + " HTTP " + (status || "응답 없음"));
-    const body = this._text(response.body);
-    if (!body.trim()) throw new Error("코티비씨 응답이 비어 있습니다.");
-    return body;
+    const text = this._text(response.body);
+    if (!text.trim()) throw new Error("코티비씨 응답이 비어 있습니다.");
+    return text;
   }
   _data(body) {
     let page;
@@ -182,6 +203,8 @@ class DefaultExtension extends MProvider {
     if (!url || visited[url] || depth > 2) throw new Error("코티비씨 외부 플레이어에서 영상 주소를 찾지 못했습니다.");
     visited[url] = true;
     const html = await this._request(url, referer), found = [];
+    const fireId = url.match(/^https:\/\/nnmo0oi1\.com\/video\/([a-f0-9]{32})(?:[/?#]|$)/i);
+    if (fireId && /FirePlayer/.test(html)) return this._firePlayer(url, referer, fireId[1]);
     for (const tag of html.match(/<(?:source|video)\b[^>]*>/gi) || []) {
       const media = this._absolute(url, this._attr(tag, "src"));
       if (this._isMedia(media)) found.push({url: media, referer: url});
@@ -204,6 +227,35 @@ class DefaultExtension extends MProvider {
       try { return await this._resolve(frame, url, depth + 1, visited); } catch (error) { lastError = error; }
     }
     throw lastError || new Error("코티비씨 외부 플레이어에서 영상 주소를 찾지 못했습니다.");
+  }
+  async _issuePlayback(page, contentId) {
+    if (!/^\d+$/.test(this._text(contentId))) throw new Error("코티비씨 재생 회차 ID가 올바르지 않습니다.");
+    const jar = this.cookies[this._base()], csrf = jar && jar["XSRF-TOKEN"];
+    if (!csrf) throw new Error("코티비씨 재생 세션 쿠키를 받지 못했습니다.");
+    let decoded;
+    try { decoded = decodeURIComponent(csrf); } catch (_) { throw new Error("코티비씨 재생 세션 쿠키가 올바르지 않습니다."); }
+    const headers = {Accept: "application/json", "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest", "X-XSRF-TOKEN": decoded, Origin: this._base()};
+    let data;
+    try { data = JSON.parse(await this._request(this._base() + "/glamov-token/" + contentId, page, {}, headers)); }
+    catch (error) { throw new Error("코티비씨 재생 주소 발급 실패 · " + error.message); }
+    const url = data && data.url;
+    if (typeof url !== "string" || !/^https?:\/\//i.test(url)) throw new Error("코티비씨 재생 주소 발급 응답에 URL이 없습니다.");
+    return url;
+  }
+  async _firePlayer(page, wrapper, id) {
+    // The public player posts its hash and document.referrer; no page script execution is needed.
+    const origin = this._origin(page), headers = {Accept: "application/json", "Content-Type": "application/x-www-form-urlencoded", "X-Requested-With": "XMLHttpRequest", Origin: origin};
+    let data;
+    try { data = JSON.parse(await this._request(origin + "/player/index.php?data=" + id + "&do=getVideo", page, "hash=" + id + "&r=" + encodeURIComponent(wrapper), headers)); }
+    catch (error) { throw new Error("코티비씨 영상 API 실패 · " + error.message); }
+    if (data.hls === true || data.hls === 1) {
+      const url = this._absolute(page, data.securedLink);
+      if (this._isMedia(url)) return [{url, referer: page}];
+    }
+    const sources = Array.isArray(data.videoSources) ? data.videoSources : [];
+    const rows = sources.map(row => ({url: this._absolute(page, row.file), referer: page})).filter(row => this._isMedia(row.url));
+    if (rows.length) return rows;
+    throw new Error("코티비씨 영상 API에 직접 재생할 수 있는 주소가 없습니다.");
   }
   async _variants(stream, referer) {
     if (!/\.m3u8(?:[?#]|$)/i.test(stream)) return [{url: stream, quality: "자동 (MP4)"}];
@@ -231,7 +283,16 @@ class DefaultExtension extends MProvider {
     const page = this._siteUrl(value), props = await this._load(page);
     const episode = props.playing || props.episode, body = episode && episode.body;
     if (!body || !body.url) throw new Error("코티비씨 회차에 영상 주소가 없습니다.");
-    const streams = await this._resolve(this._absolute(page, body.url), page, 0, {}), videos = [], seen = {};
+    const original = this._absolute(page, body.url);
+    let streams;
+    if (/^https:\/\/nnmo0oi1\.com\/video\/[a-f0-9]{32}(?:[/?#]|$)/i.test(original)) {
+      const wrapper = await this._issuePlayback(page, episode.content_id);
+      // The official wrapper embeds the same iframe supplied by this episode's page.
+      // Use its issued URL as the iframe Referer, as the browser does.
+      streams = this._origin(wrapper) === "https://mov.glamov.com"
+        ? await this._resolve(original, wrapper, 0, {}) : await this._resolve(wrapper, page, 0, {});
+    } else streams = await this._resolve(original, page, 0, {});
+    const videos = [], seen = {};
     const subtitle = this._absolute(page, body.subtitle_url || body.subtitleUrl);
     const subtitles = this._pref("kotbc_disable_site_subtitles", false) === true || !subtitle ? [] : [{file: subtitle, label: "사이트 자막"}];
     for (const stream of streams) {
