@@ -11,7 +11,7 @@ const mangayomiSources = [{
   hasCloudflare: false,
   sourceCodeUrl: "https://raw.githubusercontent.com/wsun1023/mangayomi/main/anilife.js",
   apiUrl: "",
-  version: "0.1.16",
+  version: "0.1.17",
   isManga: false,
   itemType: 1,
   isFullData: false,
@@ -19,7 +19,7 @@ const mangayomiSources = [{
   additionalParams: "",
   sourceCodeLanguage: 1,
   pkgPath: "anime/src/ko/anilife.js",
-  notes: "목록 로딩 안정화(인메모리 캐시 전환으로 MOA 48KB 제한 방어) · 더미 카드 제거로 작품 정보 불러오기 오류 해결 · 요일/완결/분기/전체탐색 필터 정상화 · 라이브 사이트 v=catalog-media-2 규격 동기화 · 포스터 이미지 wsrv.nl CDN 우회 · TVWiki/Linkkf 다중 소스 재생 연동"
+  notes: "목록 API 중계·직접 연결·웹뷰 자동 재시도 · 변경된 사이트 재생 세션을 내장 웹뷰로 처리 · 연결 실패 원인 표시 · 기존 작품/회차 주소 호환"
 }];
 
 class DefaultExtension extends MProvider {
@@ -212,7 +212,7 @@ class DefaultExtension extends MProvider {
     return ["rhttp", "dart"];
   }
   _client(kind, timeout) {
-    if (kind === "rhttp") return new Client({ persistentConnection: false, noProxy: true, timeout: timeout || 15, connectTimeout: 8 });
+    if (kind === "rhttp") return new Client({ persistentConnection: false, timeout: timeout || 15, connectTimeout: 8 });
     return new Client({ useDartHttpClient: true, persistentConnection: false, timeout: timeout || 15, connectTimeout: 8 });
   }
 
@@ -367,6 +367,7 @@ class DefaultExtension extends MProvider {
   absolute(base, path) {
     const value = this._text(path).trim();
     if (!value) return "";
+    if (value.startsWith("//")) return "https:" + value;
     if (/^https?:\/\//i.test(value)) return value;
     return this._trimSlash(base) + (value.startsWith("/") ? value : "/" + value);
   }
@@ -378,7 +379,7 @@ class DefaultExtension extends MProvider {
     return match[1];
   }
   episodeFromPlaybackUrl(url) {
-    const match = this._text(url).match(/\/api\/playback\/(\d+)\/(\d+)(?:\?|$)/);
+    const match = this._text(url).match(/\/(?:api\/playback|content)\/(\d+)\/(\d+(?:\.\d+)?)(?:[/?#]|$)/);
     if (!match) throw new Error("회차 주소 형식이 올바르지 않습니다: " + url);
     return {animeId: match[1], episode: match[2]};
   }
@@ -478,9 +479,106 @@ class DefaultExtension extends MProvider {
   }
   async proxyJson(base, apiUrl) {
     const proxyUrl = this._proxyApiUrl(base, apiUrl);
-    const body = await this._requestText(proxyUrl, this.assetBaseUrl + "/", 20);
-    try { return JSON.parse(body); }
-    catch (_) { throw new Error("애니라이프 API가 JSON 대신 다른 내용을 반환했습니다."); }
+    let lastError = null;
+    const requests = [[proxyUrl, this.assetBaseUrl + "/"], [apiUrl, base + "/"]];
+    for (const request of requests) {
+      try {
+        return this._validApiJson(JSON.parse(await this._requestText(request[0], request[1], 12)), apiUrl);
+      } catch (err) { lastError = err; }
+    }
+    // Playback must run in the site's own browser session, rather than the
+    // metadata relay's session. Catalogue requests can use a same-origin fetch.
+    if (!/\/api\/playback\//.test(apiUrl)) {
+      try { return await this._webviewApi(base, apiUrl, false); }
+      catch (err) { lastError = err; }
+    }
+    throw new Error("애니라이프 연결 실패: " + this._text(lastError && lastError.message));
+  }
+
+  _validApiJson(data, apiUrl) {
+    if (!data || typeof data !== "object" || data.error) {
+      throw new Error(this._text(data && (data.error || data.code)) || "API 응답이 올바르지 않습니다.");
+    }
+    if (/\/api\/anime(?:\?|$)/.test(apiUrl || "") && !Array.isArray(data.items)) throw new Error("작품 목록 응답이 올바르지 않습니다.");
+    if (/\/api\/anime\/\d+(?:\?|$)/.test(apiUrl || "") && !data.item) throw new Error("작품 상세 응답이 올바르지 않습니다.");
+    return data;
+  }
+
+  async _webviewApi(base, apiUrl, playback) {
+    if (typeof evaluateJavascriptViaWebview !== "function") {
+      throw new Error("내장 웹뷰를 지원하는 망가요미 버전으로 업데이트해 주세요.");
+    }
+    const info = playback ? this.episodeFromPlaybackUrl(apiUrl) : null;
+    const pageUrl = info ? this.contentUrl(base, info.animeId, info.episode) : base + "/";
+    const path = this._text(apiUrl).replace(/^https?:\/\/[^/]+/i, "");
+    // onLoadStop scripts report their result through Mangayomi's setResponse
+    // handler. Let the page establish its own playback session and observe
+    // the resulting playlists; never persist expiring media URLs.
+    const run = function(path, playback) {
+      if (window.__anilifeExtensionRunning) return;
+      window.__anilifeExtensionRunning = true;
+      let finished = false, timer = null;
+      const finish = function(data, error) {
+        if (finished) return;
+        finished = true;
+        if (timer) clearInterval(timer);
+        window.flutter_inappwebview.callHandler("setResponse", JSON.stringify({data: data || null, error: error || ""}));
+      };
+      if (!playback) {
+        fetch(path, {credentials: "include", headers: {Accept: "application/json"}})
+          .then(function(response) {
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            return response.json();
+          }).then(function(data) { finish(data, ""); })
+          .catch(function(err) { finish(null, String(err.message || err)); });
+        return;
+      }
+      const originalFetch = window.fetch.bind(window);
+      window.fetch = function(input, init) {
+        const request = originalFetch(input, init);
+        const url = typeof input === "string" ? input : input && input.url || "";
+        if (/\/api\/playback\/\d+\/\d+/.test(url)) {
+          request.then(function(response) {
+            if (!response.ok) return;
+            return response.clone().json().then(function(data) {
+              if (data && data.videoUrl) {
+                data.__userAgent = navigator.userAgent;
+                finish(data, "");
+              }
+            });
+          }).catch(function() {});
+        }
+        return request;
+      };
+      const started = Date.now();
+      const inspect = function() {
+        const resources = performance.getEntriesByType("resource").map(function(entry) { return entry.name; });
+        const streams = resources.filter(function(url, index, all) {
+          return /^https?:\/\//i.test(url) && /\.(?:m3u8|mp4)(?:[?#]|$)/i.test(url) && all.indexOf(url) === index;
+        });
+        const video = document.querySelector("video");
+        if (video && /^https?:\/\//i.test(video.currentSrc || video.src || "")) streams.unshift(video.currentSrc || video.src);
+        if (video && streams.length) {
+          const track = document.querySelector('video track[src^="https://"], video track[src^="http://"]');
+          const subtitle = track ? track.src : resources.find(function(url) { return /\.(?:vtt|srt)(?:[?#]|$)/i.test(url); });
+          finish({videoUrl: streams[0], subtitleUrl: subtitle || "", __userAgent: navigator.userAgent}, "");
+        } else if (Date.now() - started >= 25000) {
+          finish(null, "사이트에서 재생 가능한 영상 주소를 받지 못했습니다. 망가요미 웹뷰에서 해당 회차를 확인해 주세요.");
+        }
+      };
+      timer = setInterval(inspect, 250);
+      inspect();
+    };
+    const script = "(" + run.toString() + ")(" + JSON.stringify(path) + "," + (playback ? "true" : "false") + ");";
+    const raw = await evaluateJavascriptViaWebview(pageUrl, {Referer: base + "/"}, [script], 30);
+    let result = raw;
+    for (let index = 0; index < 2 && typeof result === "string"; index++) {
+      try { result = JSON.parse(result); } catch (_) { break; }
+    }
+    if (!result || typeof result !== "object" || result.error || !result.data) {
+      throw new Error(this._text(result && result.error) || "애니라이프 웹뷰 응답이 없습니다. 웹뷰로 사이트에 접속한 뒤 다시 시도해 주세요.");
+    }
+    return this._validApiJson(result.data, apiUrl);
   }
 
   _cacheToken(value) {
@@ -530,11 +628,12 @@ class DefaultExtension extends MProvider {
     let data = null;
     try {
       data = await this._cachedJson("list", apiUrl, this.cacheMs);
-    } catch (_) {
+    } catch (err) {
       await this._clearTransportFailure();
-      return { list: [], hasNextPage: false };
+      throw err;
     }
-    const items = Array.isArray(data && data.items) ? data.items : [];
+    if (!Array.isArray(data && data.items)) throw new Error("애니라이프 작품 목록 응답이 올바르지 않습니다.");
+    const items = data.items;
     const pagination = (data && data.pagination) || {};
     const list = items.map((item) => this.toListItem(base, item));
     await this._clearTransportFailure();
@@ -578,27 +677,28 @@ class DefaultExtension extends MProvider {
     }
     const id = this.idFromUrl(url);
     const base = await this._resolveBaseUrl();
-    let data = null;
+    let data = null, detailError = null;
     try {
       data = await this._cachedJson("detail", base + "/api/anime/" + id + "?v=playback-url-v1", this.cacheMs);
-    } catch (_) {
+    } catch (err) {
+      detailError = err;
       try {
         data = await this._cachedJson("detail", base + "/api/anime/" + id + "?v=playback-policy-v2", this.cacheMs);
-      } catch (_) {}
+      } catch (err) { detailError = err; }
     }
     const item = data && data.item;
     if (!item) {
       await this._clearTransportFailure();
-      throw new Error("작품 상세 응답이 올바르지 않습니다.");
+      throw detailError || new Error("작품 상세 응답이 올바르지 않습니다.");
     }
     let episodes = (Array.isArray(item.episodes) ? item.episodes : []).filter(function(episode) {
-      return episode && episode.playbackUrl;
+      return episode && episode.playable !== false && (episode.playbackUrl || episode.number !== undefined);
     }).map((episode, index) => {
       const number = this.formatEpisode(episode.number || (index + 1));
       const originalName = this._text(episode.title).trim() || (number + "화");
       const epSourceType = this._text(episode.sourceType || item.sourceType || "").trim();
-      const itemSourceUrl = this._text(item.sourceUrl || "").trim();
-      let playbackUrl = this.absolute(base, episode.playbackUrl);
+      const itemSourceUrl = this._text(episode.sourceUrl || item.sourceUrl || "").trim();
+      let playbackUrl = this.absolute(base, episode.playbackUrl || "/api/playback/" + id + "/" + number);
       const queryParts = [];
       if (epSourceType) queryParts.push("st=" + encodeURIComponent(epSourceType));
       if (itemSourceUrl) queryParts.push("su=" + encodeURIComponent(itemSourceUrl));
@@ -615,8 +715,8 @@ class DefaultExtension extends MProvider {
       };
     });
 
-    if (!episodes.length) {
-      const totalCount = Number(item.numberOfEpisodes || item.playableEpisode || item.episode || 0);
+    if (!episodes.length && !Array.isArray(item.episodes)) {
+      const totalCount = Number(item.numberOfEpisodes || item.playableEpisode || item.episodeCount || item.episode || 0);
       if (totalCount > 0) {
         episodes = Array.from({ length: totalCount }, (_, i) => {
           const num = String(i + 1);
@@ -716,23 +816,46 @@ class DefaultExtension extends MProvider {
     return null;
   }
 
+  async _playbackVideos(base, pageUrl, data) {
+    const candidates = data ? [data.videoUrl, data.backupUrl].filter(function(value, index, all) { return value && all.indexOf(value) === index; }) : [];
+    const subtitles = this._siteSubtitlesDisabled() ? [] : (data && data.subtitleUrl ? [{file: this.absolute(base, data.subtitleUrl), label: "사이트 자막"}] : []);
+    const videos = [];
+    for (let index = 0; index < candidates.length; index++) {
+      const stream = this.absolute(base, candidates[index]);
+      const isHls = /\.(?:m3u8|m3u)(?:[?#]|$)/i.test(stream);
+      const quality = index === 0 ? (isHls ? "자동 (HLS)" : "자동") : "보조 영상";
+      const expanded = isHls ? await this._expandHls(stream, pageUrl, quality) : [{url: stream, quality}];
+      for (const item of expanded) {
+        videos.push({url: item.url, originalUrl: isHls ? this._hlsOriginalUrl(item.url) : item.url, quality: item.quality,
+          headers: {Referer: pageUrl, Origin: base, "User-Agent": data.__userAgent || this.userAgent}, subtitles, audios: []});
+      }
+    }
+    return videos;
+  }
+
   async getVideoList(url) {
     try {
-      let info = null;
-      try {
-        info = this.episodeFromPlaybackUrl(url);
-      } catch (_) {
-        await this._clearTransportFailure();
-        return [];
-      }
-
+      const info = this.episodeFromPlaybackUrl(url);
       const base = await this._resolveBaseUrl();
       const pageUrl = this.contentUrl(base, info.animeId, info.episode);
+      const playbackApi = base + "/api/playback/" + info.animeId + "/" + info.episode + "?request=" + Date.now();
+      let playbackError = null;
+      for (const useWebview of [false, true]) {
+        try {
+          const data = useWebview ? await this._webviewApi(base, playbackApi, true) : await this.proxyJson(base, playbackApi);
+          const videos = await this._playbackVideos(base, pageUrl, data);
+          if (videos.length) {
+            await this._clearTransportFailure();
+            return videos;
+          }
+          playbackError = new Error("사이트 재생 응답에 영상 주소가 없습니다.");
+        } catch (err) { playbackError = err; }
+      }
       const query = this._parseQueryParams(url);
       let sourceType = (query.st || "").toLowerCase();
       let sourceUrl = query.su || "";
 
-      // 1. If sourceType or sourceUrl is missing from URL query, fetch from detail cache
+      // Preserve legacy source fallbacks when the site's own playback fails.
       if (!sourceUrl || !sourceType) {
         try {
           const detail = await this._cachedJson("detail", base + "/api/anime/" + info.animeId + "?v=playback-url-v1", this.cacheMs);
@@ -746,7 +869,6 @@ class DefaultExtension extends MProvider {
         } catch (_) {}
       }
 
-      // 2. Fallback to underlying sources (TVWiki, Linkkf) first if available
       if (sourceType === "tvwiki" || sourceUrl.startsWith("tvwiki://") || /tvwiki/i.test(sourceUrl)) {
         try {
           const tvwikiVideos = await this._resolveTvwikiSource(sourceUrl, info.episode);
@@ -767,37 +889,10 @@ class DefaultExtension extends MProvider {
         } catch (_) {}
       }
 
-      // 3. Try Anilife native playback proxy
-      let data = null;
-      try {
-        data = await this.proxyJson(base, base + "/api/playback/" + info.animeId + "/" + info.episode + "?request=" + Date.now());
-      } catch (_) {}
-
-      const candidates = data ? [data.videoUrl, data.backupUrl].filter(function(value, index, all) { return value && all.indexOf(value) === index; }) : [];
-      if (candidates.length) {
-        const subtitles = this._siteSubtitlesDisabled() ? [] : (data.subtitleUrl ? [{file: this.absolute(base, data.subtitleUrl), label: "사이트 자막"}] : []);
-        const videos = [];
-        for (let index = 0; index < candidates.length; index += 1) {
-          const value = candidates[index];
-          const stream = this.absolute(base, value);
-          const quality = index === 0 ? "자동 (HLS)" : "보조 영상";
-          const expanded = await this._expandHls(stream, pageUrl, quality);
-          for (const item of expanded) {
-            videos.push({url: item.url, originalUrl: this._hlsOriginalUrl(item.url), quality: item.quality, headers: {Referer: pageUrl, Origin: base}, subtitles, audios: []});
-          }
-        }
-        if (videos.length) {
-          await this._clearTransportFailure();
-          return videos;
-        }
-      }
-
-      // 4. Clean transport state and return empty array
+      throw playbackError || new Error("애니라이프 영상 주소를 불러오지 못했습니다.");
+    } catch (err) {
       await this._clearTransportFailure();
-      return [];
-    } catch (_) {
-      await this._clearTransportFailure();
-      return [];
+      throw err;
     }
   }
 
