@@ -1,902 +1,270 @@
 const mangayomiSources = [{
-  name: "애니라이프",
-  id: 780920260911803,
-  baseUrl: "https://anilife01.tv",
-  lang: "ko",
-  typeSource: "single",
-  iconUrl: "https://dc-toki-mangayomi-media.pages.dev/icon/ko.media.png",
-  dateFormat: "",
-  dateFormatLocale: "",
-  isNsfw: false,
-  hasCloudflare: false,
+  name: "애니라이프", id: 780920260911803, baseUrl: "https://anilife01.tv",
+  lang: "ko", typeSource: "single",
+  iconUrl: "",
+  dateFormat: "", dateFormatLocale: "", isNsfw: false, hasCloudflare: false,
   sourceCodeUrl: "https://raw.githubusercontent.com/wsun1023/mangayomi/main/anilife.js",
-  apiUrl: "",
-  version: "0.1.17",
-  isManga: false,
-  itemType: 1,
-  isFullData: false,
-  appMinVerReq: "0.9.2",
-  additionalParams: "",
-  sourceCodeLanguage: 1,
+  apiUrl: "", version: "0.2.1", isManga: false, itemType: 1, isFullData: false,
+  appMinVerReq: "0.9.2", additionalParams: "", sourceCodeLanguage: 1,
   pkgPath: "anime/src/ko/anilife.js",
-  notes: "목록 API 중계·직접 연결·웹뷰 자동 재시도 · 변경된 사이트 재생 세션을 내장 웹뷰로 처리 · 연결 실패 원인 표시 · 기존 작품/회차 주소 호환"
+  notes: "애니라이프 API 직접 연결 · 외부 중계 서버 의존성 제거 · 인기/최신/검색/필터 · 작품/회차 정보 · HTTP 쿠키 세션 재생 · 한국어/일본어 제목"
 }];
 
 class DefaultExtension extends MProvider {
   constructor() {
     super();
-    this.fallbackBaseUrl = "https://anilife01.tv";
-    this.signalUrl = "https://wankyo83.github.io/tokki-traffic-light/domains.json";
-    this.assetBaseUrl = "https://dc-toki-mangayomi-media.pages.dev";
-    this.eventManifestUrl = this.assetBaseUrl + "/assets/official-event-card.json";
-    this.cacheMs = 10 * 60 * 1000;
-    this.popularRulePreference = "anilife_popular_rule_v1";
-    this.latestRulePreference = "anilife_latest_rule_v1";
-    this.titleLanguagePreference = "anilife_title_language_v2";
-    this.titleCachePrefix = "anilife_title_meta_v3_";
+    this.defaultBase = "https://anilife01.tv";
     this.userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36";
-    this._memCache = new Map();
+    this.client = new Client({timeout: 10, persistentConnection: false});
+    this.cookies = {};
   }
-
   get supportsLatest() { return true; }
-  get base() { return this.fallbackBaseUrl; }
-  get baseUrl() { return this.fallbackBaseUrl; }
-
-  async _clearTransportFailure() {
-    try {
-      const client = new Client({ persistentConnection: false, noProxy: true, timeout: 5 });
-      await client.get(this.eventManifestUrl + "?ping=" + Date.now(), { Accept: "application/json" });
-    } catch (_) {}
-  }
-
-  _text(value) { return value === null || value === undefined ? "" : String(value); }
-  _trimSlash(value) { return this._text(value).trim().replace(/\/+$/, ""); }
-  _origin(value) { const match = this._text(value).match(/^(https?:\/\/[^/]+)/i); return match ? match[1] : ""; }
-  _isHttpsOrigin(value) { return /^https:\/\/[^\s/]+\/?$/i.test(this._text(value).trim()); }
-  _preference(key, fallback) {
-    try { const value = new SharedPreferences().get(key); return value === null || value === undefined ? fallback : value; }
+  get baseUrl() { return this._base(); }
+  get base() { return this._base(); }
+  _text(value) { return value == null ? "" : String(value); }
+  _origin(url) { return (this._text(url).match(/^https?:\/\/[^/?#]+/i) || [""])[0].toLowerCase(); }
+  _pref(key, fallback) {
+    try { const value = new SharedPreferences().get(key); return value == null ? fallback : value; }
     catch (_) { return fallback; }
   }
-  _preferenceString(key, fallback) {
-    try { const value = new SharedPreferences().getString(key, fallback); return value === null || value === undefined ? fallback : this._text(value); }
-    catch (_) { return fallback; }
+  _base() {
+    const value = this._text(this._pref("anilife_domain_url", "")).trim().replace(/\/+$/, "");
+    return /^https:\/\/[a-z0-9.-]+(?::\d+)?$/i.test(value) ? value.toLowerCase() : this.defaultBase;
   }
-  _siteSubtitlesDisabled() {
-    const value = this._preference("anilife_disable_site_subtitles", false);
-    return value === true || this._text(value).toLowerCase() === "true" || this._text(value) === "1";
-  }
-  _setPreferenceString(key, value) {
-    try { new SharedPreferences().setString(key, this._text(value)); } catch (_) {}
-  }
-  _titleLanguage() {
-    const value = this._text(this._preference(this.titleLanguagePreference, this._preferenceString(this.titleLanguagePreference, "ko"))).trim().toLowerCase();
-    return value === "ja" || value === "1" || value.indexOf("일본") >= 0 ? "ja" : "ko";
-  }
-  async _freshDetailTitleLanguage() { if (typeof setTimeout === "function") await new Promise(function(resolve) { setTimeout(resolve, 250); }); return this._titleLanguage(); }
-  _titleBridgeKey(value) { let text = this._text(value); try { text = text.normalize("NFKC"); } catch (_) {} return text.toLowerCase().replace(/[^a-z0-9가-힣ぁ-んァ-ヶ一-龯]+/g, ""); }
-  _anissiaSearchNames(value) { const original = this._text(value).trim(), cleaned = original.replace(/\s*[\(\[]?\d{4}[\)\]]?\s*$/g, "").replace(/\s*[\(\[](더빙|자막|무삭제)[\)\]]\s*$/g, "").replace(/^\s*\((고화질|저화질)\)\s*/g, "").replace(/\s+BD\s*$/i, "").trim(), plain = cleaned.replace(/[~～!！「」『』…:：·・,]+/g, " ").replace(/\s+/g, " ").trim(), season = plain.replace(/시즌\s*(\d+)/g, "$1기"), numbered = season.replace(/\s+(\d+)$/g, " $1기"), korean = (season.match(/^[가-힣0-9][가-힣0-9\s:：\-·・~～!?！？'’.,]*/) || [""])[0].replace(/[\s:：\-·・~～!?！？'’.,]+$/g, "").trim(); return [original, cleaned, plain, season, numbered, korean].filter(function(item, index, list) { return item && list.indexOf(item) === index; }); }
-  async _anissiaMetadata(original) { const names = this._anissiaSearchNames(original); for (const query of names) { try { const response = await this._clientGet("https://api.anissia.net/anime/list/0?q=" + encodeURIComponent(query), {Accept: "application/json", Referer: "https://anissia.net/anime"}, 7); if (!response || response.statusCode < 200 || response.statusCode >= 300) continue; const payload = JSON.parse(this._text(response.body)), items = payload && payload.data && Array.isArray(payload.data.content) ? payload.data.content : [], wanted = this._titleBridgeKey(query), match = items.find((item) => this._titleBridgeKey(item && item.subject) === wanted); if (match && this._text(match.originalSubject).trim()) return {ko: original, ja: this._text(match.originalSubject).trim(), anissiaId: Number(match.animeNo) || 0, confidence: 500}; } catch (_) {} } return null; }
-  _plainEnglishTitle(value) {
-    const text = this._text(value).trim();
-    return /[a-z]/i.test(text) && !/[가-힣ぁ-んァ-ヶ一-龯]/.test(text) ? text : "";
-  }
-
-  _decodeTitleText(value) {
-    return this._text(value).replace(/&#(\d+);/g, function(_, code) { return String.fromCharCode(Number(code)); }).replace(/&#x([0-9a-f]+);/gi, function(_, code) { return String.fromCharCode(parseInt(code, 16)); }).replace(/&amp;/gi, "&").replace(/&quot;/gi, "\"").replace(/&#39;|&apos;/gi, "'").replace(/&nbsp;/gi, " ").trim();
-  }
-
-  _anilistIdFromText(value) {
-    const match = this._text(value).match(/(?:\/|%2f)anime(?:\/|%2f)(\d{4,})/i);
-    return match ? Number(match[1]) : 0;
-  }
-
-  _titleBridgeMetadataFromItem(original, item) {
-    if (!item) return null;
-    const japanese = this._text(item.titleJp).trim();
-    const english = this._plainEnglishTitle(item.titleOriginal);
-    if (!japanese && !english) return null;
-    return {ko: original, ja: japanese, en: english, romaji: english, sourceId: Number(item.id) || 0, confidence: 200};
-  }
-
-  _metadataFromAniListMedia(original, media) {
-    if (!media || !media.id) return null;
-    const title = media.title || {};
-    return {ko: original, ja: this._text(title.native).trim(), en: this._text(title.english || title.romaji).trim(), romaji: this._text(title.romaji).trim(), anilistId: Number(media.id), confidence: 300};
-  }
-
-  async _aniListMetadata(original, candidate, anilistId) {
-    try {
-      const byId = Number(anilistId) > 0;
-      const query = byId ? "query($id:Int!){Media(id:$id,type:ANIME){id synonyms title{romaji english native}}}" : "query($search:String!){Page(page:1,perPage:12){media(search:$search,type:ANIME){id synonyms title{romaji english native}}}}";
-      const variables = byId ? {id: Number(anilistId)} : {search: this._text(candidate).trim()};
-      if (!byId && !variables.search) return null;
-      let response = null;
-      for (const kind of this._clientOrder()) {
-        try {
-          const client = this._client(kind, 12);
-          response = await client.post("https://graphql.anilist.co", {"Content-Type": "application/json", Accept: "application/json"}, JSON.stringify({query, variables}));
-          if (response && response.statusCode >= 200 && response.statusCode < 300) break;
-        } catch (_) {}
-      }
-      if (!response || response.statusCode < 200 || response.statusCode >= 300) return null;
-      const payload = JSON.parse(this._text(response.body));
-      if (byId) return this._metadataFromAniListMedia(original, payload && payload.data && payload.data.Media);
-      const media = payload && payload.data && payload.data.Page && Array.isArray(payload.data.Page.media) ? payload.data.Page.media : [], wanted = this._titleBridgeKey(variables.search);
-      const match = media.find((item) => [item && item.title && item.title.native, item && item.title && item.title.romaji, item && item.title && item.title.english].concat(Array.isArray(item && item.synonyms) ? item.synonyms : []).some((value) => this._titleBridgeKey(value) === wanted));
-      return this._metadataFromAniListMedia(original, match);
-    } catch (_) { return null; }
-  }
-
-  _linkkfOriginCandidates(body) {
-    const raw = this._text(body), match = raw.match(/원제[\s\S]{0,100}?<\/span>\s*([^<]+)/i);
-    if (!match) return [];
-    return this._decodeTitleText(match[1]).split(/\s*,\s*/).map((value) => value.trim()).filter(Boolean);
-  }
-
-  async _linkkfMetadata(original, url) {
-    if (!/^https:\/\/(?:www\.)?linkkf\.(?:tv|com)\/ani\/\d+\/?/i.test(this._text(url).trim())) return null;
-    try {
-      const response = await this._clientGet(this._text(url).trim(), {Accept: "text/html,application/xhtml+xml", Referer: "https://linkkf.tv/"}, 10);
-      if (!response || response.statusCode < 200 || response.statusCode >= 300) return null;
-      const body = this._text(response.body), id = this._anilistIdFromText(body);
-      if (id) { const direct = await this._aniListMetadata(original, "", id); if (direct) return direct; }
-      const candidates = this._linkkfOriginCandidates(body), ordered = candidates.filter((value) => /[ぁ-んァ-ヶ一-龯]/.test(value)).concat(candidates.filter((value) => this._plainEnglishTitle(value)));
-      for (const candidate of ordered) { const data = await this._aniListMetadata(original, candidate, 0); if (data) return data; }
-    } catch (_) {}
-    return null;
-  }
-
-  async _titleBridgeMetadata(name) {
-    const anissia = await this._anissiaMetadata(name);
-    if (anissia) return anissia;
-    try {
-      const base = await this._resolveBaseUrl();
-      for (const query of this._anissiaSearchNames(name)) {
-        let data = null;
-        try {
-          data = await this.proxyJson(base, base + "/api/anime?page=1&limit=10&q=" + encodeURIComponent(query));
-        } catch (_) { continue; }
-        const items = Array.isArray(data && data.items) ? data.items : [], wanted = this._titleBridgeKey(query);
-        const match = items.find((item) => this._titleBridgeKey(item && item.title) === wanted || this._titleBridgeKey(item && item.titleOriginal) === wanted);
-        if (!match) continue;
-        const direct = await this._fillBridgeMetadata(this._titleBridgeMetadataFromItem(name, match));
-        if (direct && direct.ja) return direct;
-        const linked = await this._linkkfMetadata(name, match.sourceUrl);
-        if (linked) return linked;
-        if (direct) return direct;
-      }
-      return null;
-    } catch (_) { return null; }
-  }
-  async _fillBridgeMetadata(data) {
-    if (!data) return data;
-    if (data.ja) return data;
-    const filled = await this._aniListMetadata(data.ko || "", data.ja || data.romaji || data.en, data.anilistId);
-    return filled || data;
-  }
-  async _titleMetadata(name) {
-    const original = this._text(name).trim();
-    if (!original) return null;
-    const key = this.titleCachePrefix + this._cacheToken(original), timeKey = key + "_time";
-    const cached = this._preferenceString(key, ""), cachedAt = Number(this._preferenceString(timeKey, "0"));
-    if (cached && cachedAt > 0) { try { const parsed = JSON.parse(cached), ttl = parsed && parsed.miss ? 6 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000; if (Date.now() - cachedAt < ttl) return parsed && parsed.miss ? null : parsed; } catch (_) {} }
-    try {
-      const data = await this._fillBridgeMetadata(await this._titleBridgeMetadata(original));
-      if (!data || !data.ja) { this._setPreferenceString(key, JSON.stringify({miss: true})); this._setPreferenceString(timeKey, String(Date.now())); return null; }
-      this._setPreferenceString(key, JSON.stringify(data)); this._setPreferenceString(timeKey, String(Date.now()));
-      return data;
-    } catch (_) { return null; }
-  }
-  async _localizedTitle(name, directMetadata, languageOverride) {
-    const original = this._text(name).trim(), language = languageOverride || this._titleLanguage();
-    if (!original || language === "ko") return original;
-    const direct = directMetadata ? this._text(directMetadata[language]).trim() : "";
-    if (direct) return direct;
-    const data = await this._titleMetadata(original), localized = data ? this._text(data[language]).trim() : "";
-    return localized || original;
-  }
-  async _localizeResult(result) {
-    if (!result || !Array.isArray(result.list)) return result;
-    const items = result.list, language = this._titleLanguage(), workers = []; let cursor = 0;
-    const work = async () => { while (true) { const index = cursor++; if (index >= items.length) return; const item = items[index]; if (!item) continue; const direct = item.__dcTitleMeta || null; delete item.__dcTitleMeta; if (language === "ko" || /\/__anilife_(?:weekday|event)_card__\//.test(this._text(item.link))) continue; item.name = await this._localizedTitle(item.name, direct); } };
-    for (let index = 0; index < Math.min(4, items.length); index++) workers.push(work());
-    await Promise.all(workers); return result;
-  }
-
-  getHeaders(url) {
-    const origin = this._origin(url) || this.fallbackBaseUrl;
-    return { Referer: origin + "/", Origin: origin, Accept: "application/json, text/plain, */*", "User-Agent": this.userAgent };
-  }
-
-  _clientOrder() {
-    return ["rhttp", "dart"];
-  }
-  _client(kind, timeout) {
-    if (kind === "rhttp") return new Client({ persistentConnection: false, timeout: timeout || 15, connectTimeout: 8 });
-    return new Client({ useDartHttpClient: true, persistentConnection: false, timeout: timeout || 15, connectTimeout: 8 });
-  }
-
-  async _clientGet(url, headers, timeout) {
-    let lastError = null;
-    for (const kind of this._clientOrder()) {
-      try {
-        const client = this._client(kind, timeout);
-        const response = await client.get(url, headers || {});
-        if (response && response.statusCode >= 200 && response.statusCode < 400) return response;
-        lastError = new Error("HTTP " + (response ? response.statusCode : "unknown"));
-      } catch (err) { lastError = err; }
-    }
-    throw lastError || new Error("요청 실패: " + url);
-  }
-
-  async _requestText(url, referer, timeout) {
-    const headers = this.getHeaders(url);
-    if (referer) headers.Referer = referer;
-    const response = await this._clientGet(url, headers, timeout || 12);
-    if (response.statusCode < 200 || response.statusCode >= 300) throw new Error("HTTP " + response.statusCode);
-    return this._text(response.body);
-  }
-
-  async _resolveBaseUrl() {
-    const manual = this._trimSlash(this._preference("anilife_domain_url", ""));
-    if (this._isHttpsOrigin(manual)) return manual;
-    const cached = this._trimSlash(this._preferenceString("anilife_resolved_base", ""));
-    const cachedAt = Number(this._preferenceString("anilife_resolved_base_time", "0"));
-    if (this._isHttpsOrigin(cached) && cachedAt > 0 && Date.now() - cachedAt < this.cacheMs) return cached;
-    try {
-      const join = this.signalUrl.indexOf("?") >= 0 ? "&" : "?";
-      const data = JSON.parse(await this._requestText(this.signalUrl + join + "anilife=" + Date.now(), this.signalUrl, 8));
-      const candidate = this._trimSlash(data && data.domains && data.domains.anilife && data.domains.anilife.baseUrl);
-      if (this._isHttpsOrigin(candidate)) {
-        this._setPreferenceString("anilife_resolved_base", candidate);
-        this._setPreferenceString("anilife_resolved_base_time", String(Date.now()));
-        return candidate;
-      }
-    } catch (_) {}
-    return this._isHttpsOrigin(cached) ? cached : this.fallbackBaseUrl;
-  }
-
-  _coverImageUrl(base, raw) {
-    const text = this._text(raw).trim();
-    if (!text) return "";
-    const url = this.absolute(base, text);
-    if (/^https?:\/\//i.test(url) && (url.includes("/anime_uploads/") || url.includes("anilife") || url.includes("/api/thumb/"))) {
-      return "https://wsrv.nl/?url=" + encodeURIComponent(url);
-    }
-    return url;
-  }
-
-  get formatOptions() {
-    return [["전체", ""], ["TV", "TV"], ["극장판", "Movie"], ["OVA", "OVA"], ["ONA", "ONA"]];
-  }
-  get statusOptions() {
-    return [["전체", ""], ["방영중", "방영중"], ["완결", "완결"], ["방영예정", "방영예정"]];
-  }
-  get dayOptions() {
-    return [["전체", ""], ["월요일", "월"], ["화요일", "화"], ["수요일", "수"], ["목요일", "목"], ["금요일", "금"], ["토요일", "토"], ["일요일", "일"]];
-  }
-  get genreOptions() {
-    return [
-      "코미디", "액션", "판타지", "드라마", "로맨스", "일상", "모험", "SF", "초자연", "미스터리",
-      "스포츠", "음악", "메카", "심리", "호러", "마법소녀", "스릴러", "소년", "학원", "서스펜스",
-      "이세계", "미식", "중국 애니", "청년", "역사", "초능력", "BL", "GL", "환생", "밀리터리",
-      "우주", "아방가르드", "웹툰원작", "신화", "소녀", "무술", "수상작", "탐정", "하렘", "시간여행",
-      "패러디", "레이싱", "직장", "치유", "게임", "공연예술", "오타쿠", "팀 스포츠"
-    ].map(function(value) { return [value, value]; });
-  }
-  get yearOptions() {
-    const years = [["전체", ""]];
-    for (let year = new Date().getFullYear() + 1; year >= 1977; year -= 1) years.push([String(year) + "년", String(year)]);
-    return years;
-  }
-  get scopeOptions() { return [["전체 작품", ""], ["인기 작품", "popular"], ["최근 7일 업데이트", "updates"]]; }
-  get sortOptions() { return [["최신순", "latest"], ["인기순", "popular"], ["평점순", "rating"], ["이름순", "title"]]; }
-
-  _option(name, value) { return {type_name: "SelectOption", name, value}; }
-  _select(type, name, pairs, includeUnset) {
-    const values = pairs.map((pair) => this._option(pair[0], pair[1]));
-    if (includeUnset !== false) values.unshift(this._option("선택하세요", "__unset__"));
-    return {type, name, type_name: "SelectFilter", values};
-  }
-  _filterValue(filters, type, fallback) {
-    if (!Array.isArray(filters)) return fallback;
-    for (const filter of filters) {
-      if (!filter || filter.type !== type || !Array.isArray(filter.values)) continue;
-      const option = filter.values[Number(filter.state) || 0];
-      if (!option || option.value === undefined) return fallback;
-      const value = this._text(option.value);
-      return value === "__unset__" ? fallback : value;
-    }
-    return fallback;
-  }
-  _normalizeCriteria(criteria, fallback) {
-    const base = fallback || {scope: "", format: "", status: "", day: "", year: "", genre: "", sort: "latest"};
-    const value = criteria || {};
-    const allowed = (candidate, pairs, otherwise) => pairs.some(function(pair) { return pair[1] === candidate; }) ? candidate : otherwise;
-    return {
-      scope: allowed(this._text(value.scope), this.scopeOptions, base.scope),
-      format: allowed(this._text(value.format), this.formatOptions, base.format),
-      status: allowed(this._text(value.status), this.statusOptions, base.status),
-      day: allowed(this._text(value.day), this.dayOptions, base.day),
-      year: allowed(this._text(value.year), this.yearOptions, base.year),
-      genre: allowed(this._text(value.genre), [["전체", ""]].concat(this.genreOptions), base.genre),
-      sort: allowed(this._text(value.sort), this.sortOptions, base.sort)
-    };
-  }
-  _filterCriteria(filters) {
-    return this._normalizeCriteria({
-      scope: this._filterValue(filters, "scope", ""), format: this._filterValue(filters, "format", ""),
-      status: this._filterValue(filters, "status", ""), day: this._filterValue(filters, "day", ""),
-      year: this._filterValue(filters, "year", ""), genre: this._filterValue(filters, "genre", ""),
-      sort: this._filterValue(filters, "sort", "latest")
-    });
-  }
-  _defaultPopularRule() { return {scope: "popular", format: "", status: "", day: "", year: "", genre: "", sort: "popular"}; }
-  _defaultLatestRule() { return {scope: "updates", format: "", status: "", day: "", year: "", genre: "", sort: "latest"}; }
-  _tabRule(key, fallback) {
-    const raw = this._preferenceString(key, "");
-    if (!raw) return this._normalizeCriteria(fallback, fallback);
-    try { return this._normalizeCriteria(JSON.parse(raw), fallback); } catch (_) { return this._normalizeCriteria(fallback, fallback); }
-  }
-
-  getFilterList() {
-    const separator = (type) => ({type, name: "", type_name: "SeparatorFilter"});
-    const header = (type, name) => ({type, name, type_name: "HeaderFilter"});
-    return [
-      header("filterHelp", "원하는 조건만 선택하세요. 선택하지 않은 항목은 전체로 처리하며 여러 조건은 함께 적용됩니다."),
-      this._select("scope", "목록 종류", this.scopeOptions),
-      this._select("format", "작품 형식", this.formatOptions),
-      this._select("status", "방영 상태", this.statusOptions),
-      this._select("day", "방영 요일", this.dayOptions),
-      this._select("year", "방영 연도", this.yearOptions),
-      this._select("genre", "주요 장르", [["전체", ""]].concat(this.genreOptions)),
-      separator("sortSeparator"),
-      this._select("sort", "정렬", this.sortOptions),
-      header("genreHelp", "제목·원제·제작사·감독도 검색창에서 함께 검색됩니다.")
-    ];
-  }
-
-  getSourcePreferences() {
-    return [
-      {key: "anilife_title_language_v2", listPreference: {title: "작품 제목 언어", summary: "한국어와 일본어 중에서 선택합니다. 변경 후 현재 화면을 새로고침하세요. Anissia에서 매칭되지 않는 작품은 한국어를 유지합니다.", valueIndex: 0, entries: ["한국어", "일본어"], entryValues: ["ko", "ja"]}},
-      {key: "anilife_domain_url", editTextPreference: {title: "애니라이프 주소 직접 지정 (선택)", summary: "빈 값이면 토끼 중앙신호등에 등록된 주소를 사용합니다.", value: "", dialogTitle: "애니라이프 주소", dialogMessage: "https://로 시작하는 사이트 주소를 입력하세요. 자동 주소를 쓰려면 비워 두세요."}},
-      {key: "anilife_disable_site_subtitles", switchPreferenceCompat: {title: "사이트 자막 끄기", summary: "기본은 꺼짐. 켜면 사이트가 제공하는 외부 자막을 플레이어에 전달하지 않습니다. 영상에 포함된 자막은 제거되지 않습니다.", value: false}}
-    ];
-  }
-
-  absolute(base, path) {
-    const value = this._text(path).trim();
-    if (!value) return "";
-    if (value.startsWith("//")) return "https:" + value;
-    if (/^https?:\/\//i.test(value)) return value;
-    return this._trimSlash(base) + (value.startsWith("/") ? value : "/" + value);
-  }
-  contentUrl(base, id, episode) { return this._trimSlash(base) + "/content/" + id + "/" + (episode || 1); }
-  idFromUrl(url) {
-    const text = this._text(url).trim();
-    const match = text.match(/\/content\/(\d+)(?:\/|$)/) || text.match(/\/(\d+)(?:\/|$)/);
-    if (!match) throw new Error("작품 주소에서 ID를 찾지 못했습니다: " + url);
-    return match[1];
-  }
-  episodeFromPlaybackUrl(url) {
-    const match = this._text(url).match(/\/(?:api\/playback|content)\/(\d+)\/(\d+(?:\.\d+)?)(?:[/?#]|$)/);
-    if (!match) throw new Error("회차 주소 형식이 올바르지 않습니다: " + url);
-    return {animeId: match[1], episode: match[2]};
-  }
-  _parseQueryParams(url) {
-    const output = {};
-    const qIndex = url.indexOf("?");
-    if (qIndex < 0) return output;
-    const queryString = url.slice(qIndex + 1).split("#")[0];
-    const pairs = queryString.split("&");
-    for (const pair of pairs) {
-      if (!pair) continue;
-      const eqIndex = pair.indexOf("=");
-      const key = eqIndex >= 0 ? decodeURIComponent(pair.slice(0, eqIndex)) : decodeURIComponent(pair);
-      const val = eqIndex >= 0 ? decodeURIComponent(pair.slice(eqIndex + 1)) : "";
-      output[key] = val;
-    }
-    return output;
-  }
-  _base64Url(value) {
-    const text = this._text(value);
-    let bytes = [];
-    for (let i = 0; i < text.length; i++) {
-      let code = text.charCodeAt(i);
-      if (code < 128) bytes.push(code);
-      else if (code < 2048) { bytes.push(192 | (code >> 6)); bytes.push(128 | (code & 63)); }
-      else { bytes.push(224 | (code >> 12)); bytes.push(128 | ((code >> 6) & 63)); bytes.push(128 | (code & 63)); }
-    }
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-    let output = "";
-    for (let i = 0; i < bytes.length; i += 3) {
-      const b0 = bytes[i], b1 = i + 1 < bytes.length ? bytes[i + 1] : 0, b2 = i + 2 < bytes.length ? bytes[i + 2] : 0;
-      output += chars[b0 >> 2] + chars[((b0 & 3) << 4) | (b1 >> 4)];
-      if (i + 1 < bytes.length) output += chars[((b1 & 15) << 2) | (b2 >> 6)];
-      if (i + 2 < bytes.length) output += chars[b2 & 63];
-    }
-    return output;
-  }
-
-  _hlsOriginalUrl(value) {
-    const url = this._text(value).trim().replace(/#.*$/, "");
-    if (!url) return "";
-    return /\.(?:m3u8|m3u)$/i.test(url) ? url : url + "#download.m3u8";
-  }
-
-  _absoluteMediaUrl(base, value) {
-    const url = this._text(value).trim();
-    if (!url) return "";
-    if (url.startsWith("//")) return "https:" + url;
-    if (/^https?:\/\//i.test(url)) return url;
+  _absolute(base, value) {
+    const path = this._text(value).trim();
+    if (!path) return "";
+    if (/^https?:\/\//i.test(path)) return path;
+    if (path.startsWith("//")) return "https:" + path;
     const origin = this._origin(base);
-    if (url.startsWith("/")) return origin + url;
-    const match = url.match(/^([^?#]*)([?#].*)?$/);
-    const relativePath = match ? match[1] : url;
-    const suffix = match && match[2] ? match[2] : "";
-    const basePath = this._text(base).replace(origin, "").replace(/[?#].*$/, "").replace(/[^/]*$/, "");
-    const parts = (basePath + relativePath).split("/");
-    const normalized = [];
+    if (path.startsWith("/")) return origin + path;
+    if (path.startsWith("?")) return base.replace(/[?#].*$/, "") + path;
+    if (path.startsWith("#")) return base.replace(/#.*$/, "") + path;
+    const relative = path.match(/^([^?#]*)([?#].*)?$/);
+    const directory = base.replace(/[?#].*$/, "").replace(/[^/]*$/, "");
+    const parts = (directory.replace(origin, "") + relative[1]).split("/"), output = [];
     for (const part of parts) {
       if (!part || part === ".") continue;
-      if (part === "..") normalized.pop();
-      else normalized.push(part);
+      if (part === "..") output.pop(); else output.push(part);
     }
-    return origin + "/" + normalized.join("/") + suffix;
+    return origin + "/" + output.join("/") + (relative[2] || "");
+  }
+  _workUrl(id) { return this._base() + "/content/" + id + "/1"; }
+  _workId(url) {
+    const match = this._text(url).match(/\/(?:content|api\/anime)\/(\d+)(?:[/?#]|$)/);
+    if (!match) throw new Error("애니라이프 작품 주소에 ID가 없습니다.");
+    return match[1];
+  }
+  _episode(url) {
+    const match = this._text(url).match(/\/(?:api\/playback|content)\/(\d+)\/(\d+(?:\.\d+)?)(?:[/?#]|$)/);
+    if (!match) throw new Error("애니라이프 회차 주소가 올바르지 않습니다.");
+    return {id: match[1], number: match[2]};
+  }
+  _title(item) {
+    return this._text(this._pref("anilife_title_language_v2", "ko")) === "ja" && item.titleJp
+      ? this._text(item.titleJp) : this._text(item.title || item.titleOriginal || ("작품 " + item.id));
+  }
+  _cover(value) {
+    const url = this._absolute(this._base() + "/", value);
+    return url && this._origin(url) === this._base() ? "https://wsrv.nl/?url=" + encodeURIComponent(url) : url;
+  }
+  getHeaders(url) {
+    return {Referer: (this._origin(url) || this._base()) + "/", "User-Agent": this.userAgent, Accept: "*/*"};
   }
 
-  async _expandHls(stream, pageUrl, quality) {
+  _saveCookies(url, headers) {
+    const origin = this._origin(url);
+    // Anonymous site cookies stay in this provider instance, never in preferences.
+    if (origin !== this._base() || !headers) return;
+    let values;
+    for (const key of Object.keys(headers)) if (key.toLowerCase() === "set-cookie") values = headers[key];
+    if (!values) return;
+    const rows = Array.isArray(values) ? values : this._text(values).split(/,(?=\s*[^;,=\s]+=)/);
+    const jar = this.cookies[origin] || (this.cookies[origin] = Object.create(null));
+    for (const row of rows) {
+      const pair = this._text(row).split(";")[0].trim(), equals = pair.indexOf("=");
+      if (equals <= 0) continue;
+      const name = pair.slice(0, equals), value = pair.slice(equals + 1);
+      const expires = /;\s*expires\s*=\s*([^;]+)/i.exec(row);
+      if (/;\s*max-age\s*=\s*0(?:;|$)/i.test(row) || !value || expires && Date.parse(expires[1]) < Date.now()) delete jar[name];
+      else jar[name] = value;
+    }
+  }
+  _siteHeaders(referer) {
+    const base = this._base();
+    const headers = {Referer: referer || base + "/", Origin: base, "User-Agent": this.userAgent, Accept: "application/json, text/plain, */*"};
+    const jar = this.cookies[base];
+    if (jar && Object.keys(jar).length) headers.Cookie = Object.keys(jar).map(key => key + "=" + jar[key]).join("; ");
+    return headers;
+  }
+  async _request(url, headers, body) {
+    const response = body === undefined ? await this.client.get(url, headers) : await this.client.post(url, headers, body);
+    this._saveCookies(url, response && response.headers);
+    const status = Number(response && response.statusCode);
+    if (!(status >= 200 && status < 300)) {
+      let message = "HTTP " + (status || "응답 없음");
+      try {
+        const data = JSON.parse(this._text(response && response.body));
+        if (typeof data.error === "string") message += " · " + data.error.slice(0, 200);
+      } catch (_) {}
+      const error = new Error(message); error.statusCode = status; throw error;
+    }
+    return response;
+  }
+  _json(response) {
+    let data;
+    try { data = JSON.parse(this._text(response.body).replace(/^\uFEFF/, "")); }
+    catch (_) { throw new Error("애니라이프에서 JSON이 아닌 응답을 받았습니다."); }
+    if (!data || typeof data !== "object" || data.error) throw new Error(this._text(data && data.error) || "애니라이프 응답이 비어 있습니다.");
+    return data;
+  }
+  async _api(path, field) {
+    if (!/^\/api\/anime(?:\/\d+)?(?:\?|$)/.test(path)) throw new Error("애니라이프 API 경로가 올바르지 않습니다.");
+    const data = this._json(await this._request(this._base() + path, this._siteHeaders()));
+    if (field === "items" ? !Array.isArray(data.items) : !data.item || typeof data.item !== "object") throw new Error("애니라이프 " + field + " 응답 형식이 올바르지 않습니다.");
+    return data;
+  }
+
+  _select(type, name, pairs) {
+    return {type, name, type_name: "SelectFilter", state: 0, values: pairs.map(pair => ({type_name: "SelectOption", name: pair[0], value: pair[1]}))};
+  }
+  getFilterList() {
+    const years = [["전체", ""]];
+    for (let year = new Date().getFullYear() + 1; year >= 1977; year--) years.push([String(year), String(year)]);
+    return [
+      this._select("sort", "정렬", [["최신순", "latest"], ["인기순", "popular"], ["평점순", "rating"], ["이름순", "title"]]),
+      this._select("format", "형식", [["전체", ""], ["TV", "TV"], ["극장판", "Movie"], ["OVA", "OVA"], ["ONA", "ONA"]]),
+      this._select("status", "상태", [["전체", ""], ["방영중", "방영중"], ["완결", "완결"], ["방영예정", "방영예정"]]),
+      this._select("day", "요일", [["전체", ""], ["월", "월"], ["화", "화"], ["수", "수"], ["목", "목"], ["금", "금"], ["토", "토"], ["일", "일"]]),
+      this._select("year", "연도", years)
+    ];
+  }
+  _filters(filters) {
+    const result = {};
+    for (const filter of Array.isArray(filters) ? filters : []) {
+      if (!filter || !["sort", "format", "status", "day", "year"].includes(filter.type) || !Array.isArray(filter.values)) continue;
+      const option = filter.values[Number(filter.state) || 0];
+      if (option && option.value != null) result[filter.type] = this._text(option.value);
+    }
+    return result;
+  }
+  async _catalog(page, criteria, query) {
+    const options = criteria || {};
+    const params = ["page=" + Math.max(1, Number(page) || 1), "limit=24", "v=catalog-media-2", "sort=" + encodeURIComponent(options.sort || "latest")];
+    if (query) params.push("q=" + encodeURIComponent(this._text(query).trim()));
+    for (const key of ["scope", "format", "status", "day", "year"]) if (options[key]) params.push(key + "=" + encodeURIComponent(options[key]));
+    if (options.day && !options.status) params.push("status=" + encodeURIComponent("방영중"));
+    const data = await this._api("/api/anime?" + params.join("&"), "items"), pagination = data.pagination || {};
+    return {
+      list: data.items.filter(item => item && /^\d+$/.test(this._text(item.id))).map(item => ({name: this._title(item), link: this._workUrl(item.id), imageUrl: this._cover(item.image)})),
+      hasNextPage: Number(pagination.page || page || 1) < Number(pagination.pages || 1)
+    };
+  }
+  async getPopular(page) { return this._catalog(page, {sort: "popular", scope: "popular"}, ""); }
+  async getLatestUpdates(page) { return this._catalog(page, {sort: "latest", scope: "updates"}, ""); }
+  async search(query, page, filters) { return this._catalog(page, this._filters(filters), this._text(query).trim()); }
+
+  async getDetail(url) {
+    const id = this._workId(url), data = await this._api("/api/anime/" + id + "?v=playback-url-v1", "item"), item = data.item;
+    let rows = Array.isArray(item.episodes) ? item.episodes : [];
+    if (!Array.isArray(item.episodes)) {
+      const count = Math.min(2000, Math.max(0, Math.floor(Number(item.playableEpisode || item.episodeCount || item.numberOfEpisodes || item.episode) || 0)));
+      rows = Array.from({length: count}, (_, index) => ({number: index + 1}));
+    }
+    const episodes = [], seen = {};
+    for (let index = 0; index < rows.length; index++) {
+      const row = rows[index];
+      if (!row || row.playable === false) continue;
+      const number = row.number == null ? index + 1 : row.number;
+      if (!/^\d+(?:\.\d+)?$/.test(this._text(number))) continue;
+      const playbackUrl = this._absolute(this._base() + "/", row.playbackUrl || "/api/playback/" + id + "/" + number);
+      if (seen[playbackUrl]) continue;
+      seen[playbackUrl] = true;
+      const title = this._text(row.title).trim(), label = number + "화", date = Date.parse(this._text(row.date));
+      episodes.push({name: title && title !== label ? label + " · " + title : label, url: playbackUrl, dateUpload: Number.isFinite(date) ? String(date) : "", scanlator: "", isFiller: false});
+    }
+    episodes.reverse();
+    return {
+      name: this._title(item), link: this._workUrl(id), imageUrl: this._cover(item.image),
+      description: this._text(item.description), author: [item.studio, item.director].filter(Boolean).join(" · "), artist: "",
+      genre: Array.isArray(item.genres) ? item.genres : [], status: item.status === "완결" ? 1 : item.status === "방영예정" ? 4 : 0,
+      episodes, chapters: episodes
+    };
+  }
+
+  async _nativePlayback(info) {
+    const base = this._base(), page = base + "/content/" + info.id + "/" + info.number;
+    const api = base + "/api/playback/" + info.id + "/" + info.number + "?request=" + Date.now();
+    try { return this._json(await this._request(api, this._siteHeaders(page))); }
+    catch (error) {
+      if (error.statusCode !== 401 && error.statusCode !== 403 && !/권한|PLAYBACK_FORBIDDEN/.test(this._text(error.message))) throw error;
+    }
+    // Best-effort HTTP cookie refresh. Live session acceptance needs site validation.
+    await this._request(page, this._siteHeaders(base + "/"));
     try {
-      const manifest = await this._requestText(stream, pageUrl, 15);
-      const lines = this._text(manifest).split(/\r?\n/);
-      const variants = [];
-      for (let index = 0; index < lines.length; index += 1) {
-        if (lines[index].trim().indexOf("#EXT-X-STREAM-INF:") !== 0) continue;
+      const headers = this._siteHeaders(page); headers["Content-Type"] = "application/json";
+      await this._request(base + "/api/playback/session", headers, {});
+    } catch (_) {
+      // Some versions establish a session on the page response.
+    }
+    return this._json(await this._request(api, this._siteHeaders(page)));
+  }
+  _mediaHeaders(page, stream) {
+    const headers = {Referer: page, Origin: this._base(), "User-Agent": this.userAgent, Accept: "*/*"};
+    if (this._origin(stream) === this._base()) {
+      const cookie = this._siteHeaders(page).Cookie;
+      if (cookie) headers.Cookie = cookie;
+    }
+    return headers;
+  }
+  async _variants(stream, headers) {
+    if (!/\.m3u8(?:[?#]|$)/i.test(stream)) return [{url: stream, quality: "자동"}];
+    try {
+      const lines = this._text((await this._request(stream, headers)).body).split(/\r?\n/), variants = [];
+      for (let index = 0; index < lines.length; index++) {
+        if (!/^#EXT-X-STREAM-INF:/.test(lines[index].trim())) continue;
         let child = "";
-        for (let next = index + 1; next < lines.length; next += 1) {
-          const candidate = lines[next].trim();
-          if (candidate && !candidate.startsWith("#")) { child = candidate; break; }
+        for (let next = index + 1; next < lines.length; next++) {
+          const value = lines[next].trim();
+          if (value && !value.startsWith("#")) { child = value; break; }
         }
         if (!child) continue;
-        const info = lines[index];
-        const height = (info.match(/RESOLUTION=\d+x(\d+)/i) || [])[1];
-        const bandwidth = Number((info.match(/BANDWIDTH=(\d+)/i) || [])[1] || 0);
-        const label = height ? height + "p" : bandwidth > 0 ? Math.round(bandwidth / 1000) + "kbps" : quality;
-        variants.push({url: this._absoluteMediaUrl(stream, child), quality: label});
+        const height = (lines[index].match(/RESOLUTION=\d+x(\d+)/i) || [])[1];
+        variants.push({url: this._absolute(stream, child), quality: height ? height + "p" : "자동 (HLS)"});
       }
       if (variants.length) return variants;
     } catch (_) {}
-    return [{url: stream, quality}];
+    return [{url: stream, quality: "자동 (HLS)"}];
   }
-
-  _proxyApiUrl(base, apiUrl) {
-    const path = this._text(apiUrl).replace(/^https?:\/\/[^/]+/i, "");
-    if (!/^\/api\/(?:anime(?:\/\d+)?|playback\/\d+\/\d+|bootstrap|directory|meta)(?:\?|$)/.test(path)) {
-      throw new Error("허용되지 않은 애니라이프 API 주소입니다.");
-    }
-    const join = path.indexOf("?") >= 0 ? "&" : "?";
-    return this.assetBaseUrl + "/anilife-api" + path.slice(4) + join + "origin=" + encodeURIComponent(this._trimSlash(base));
-  }
-  async proxyJson(base, apiUrl) {
-    const proxyUrl = this._proxyApiUrl(base, apiUrl);
-    let lastError = null;
-    const requests = [[proxyUrl, this.assetBaseUrl + "/"], [apiUrl, base + "/"]];
-    for (const request of requests) {
-      try {
-        return this._validApiJson(JSON.parse(await this._requestText(request[0], request[1], 12)), apiUrl);
-      } catch (err) { lastError = err; }
-    }
-    // Playback must run in the site's own browser session, rather than the
-    // metadata relay's session. Catalogue requests can use a same-origin fetch.
-    if (!/\/api\/playback\//.test(apiUrl)) {
-      try { return await this._webviewApi(base, apiUrl, false); }
-      catch (err) { lastError = err; }
-    }
-    throw new Error("애니라이프 연결 실패: " + this._text(lastError && lastError.message));
-  }
-
-  _validApiJson(data, apiUrl) {
-    if (!data || typeof data !== "object" || data.error) {
-      throw new Error(this._text(data && (data.error || data.code)) || "API 응답이 올바르지 않습니다.");
-    }
-    if (/\/api\/anime(?:\?|$)/.test(apiUrl || "") && !Array.isArray(data.items)) throw new Error("작품 목록 응답이 올바르지 않습니다.");
-    if (/\/api\/anime\/\d+(?:\?|$)/.test(apiUrl || "") && !data.item) throw new Error("작품 상세 응답이 올바르지 않습니다.");
-    return data;
-  }
-
-  async _webviewApi(base, apiUrl, playback) {
-    if (typeof evaluateJavascriptViaWebview !== "function") {
-      throw new Error("내장 웹뷰를 지원하는 망가요미 버전으로 업데이트해 주세요.");
-    }
-    const info = playback ? this.episodeFromPlaybackUrl(apiUrl) : null;
-    const pageUrl = info ? this.contentUrl(base, info.animeId, info.episode) : base + "/";
-    const path = this._text(apiUrl).replace(/^https?:\/\/[^/]+/i, "");
-    // onLoadStop scripts report their result through Mangayomi's setResponse
-    // handler. Let the page establish its own playback session and observe
-    // the resulting playlists; never persist expiring media URLs.
-    const run = function(path, playback) {
-      if (window.__anilifeExtensionRunning) return;
-      window.__anilifeExtensionRunning = true;
-      let finished = false, timer = null;
-      const finish = function(data, error) {
-        if (finished) return;
-        finished = true;
-        if (timer) clearInterval(timer);
-        window.flutter_inappwebview.callHandler("setResponse", JSON.stringify({data: data || null, error: error || ""}));
-      };
-      if (!playback) {
-        fetch(path, {credentials: "include", headers: {Accept: "application/json"}})
-          .then(function(response) {
-            if (!response.ok) throw new Error("HTTP " + response.status);
-            return response.json();
-          }).then(function(data) { finish(data, ""); })
-          .catch(function(err) { finish(null, String(err.message || err)); });
-        return;
-      }
-      const originalFetch = window.fetch.bind(window);
-      window.fetch = function(input, init) {
-        const request = originalFetch(input, init);
-        const url = typeof input === "string" ? input : input && input.url || "";
-        if (/\/api\/playback\/\d+\/\d+/.test(url)) {
-          request.then(function(response) {
-            if (!response.ok) return;
-            return response.clone().json().then(function(data) {
-              if (data && data.videoUrl) {
-                data.__userAgent = navigator.userAgent;
-                finish(data, "");
-              }
-            });
-          }).catch(function() {});
-        }
-        return request;
-      };
-      const started = Date.now();
-      const inspect = function() {
-        const resources = performance.getEntriesByType("resource").map(function(entry) { return entry.name; });
-        const streams = resources.filter(function(url, index, all) {
-          return /^https?:\/\//i.test(url) && /\.(?:m3u8|mp4)(?:[?#]|$)/i.test(url) && all.indexOf(url) === index;
-        });
-        const video = document.querySelector("video");
-        if (video && /^https?:\/\//i.test(video.currentSrc || video.src || "")) streams.unshift(video.currentSrc || video.src);
-        if (video && streams.length) {
-          const track = document.querySelector('video track[src^="https://"], video track[src^="http://"]');
-          const subtitle = track ? track.src : resources.find(function(url) { return /\.(?:vtt|srt)(?:[?#]|$)/i.test(url); });
-          finish({videoUrl: streams[0], subtitleUrl: subtitle || "", __userAgent: navigator.userAgent}, "");
-        } else if (Date.now() - started >= 25000) {
-          finish(null, "사이트에서 재생 가능한 영상 주소를 받지 못했습니다. 망가요미 웹뷰에서 해당 회차를 확인해 주세요.");
-        }
-      };
-      timer = setInterval(inspect, 250);
-      inspect();
-    };
-    const script = "(" + run.toString() + ")(" + JSON.stringify(path) + "," + (playback ? "true" : "false") + ");";
-    const raw = await evaluateJavascriptViaWebview(pageUrl, {Referer: base + "/"}, [script], 30);
-    let result = raw;
-    for (let index = 0; index < 2 && typeof result === "string"; index++) {
-      try { result = JSON.parse(result); } catch (_) { break; }
-    }
-    if (!result || typeof result !== "object" || result.error || !result.data) {
-      throw new Error(this._text(result && result.error) || "애니라이프 웹뷰 응답이 없습니다. 웹뷰로 사이트에 접속한 뒤 다시 시도해 주세요.");
-    }
-    return this._validApiJson(result.data, apiUrl);
-  }
-
-  _cacheToken(value) {
-    const text = this._text(value); let hash = 2166136261;
-    for (let i = 0; i < text.length; i += 1) { hash ^= text.charCodeAt(i); hash = Math.imul(hash, 16777619); }
-    return (hash >>> 0).toString(16);
-  }
-  async _cachedJson(namespace, apiUrl, ttl) {
-    const key = namespace + "_" + this._cacheToken(apiUrl);
-    const cached = this._memCache.get(key);
-    if (cached && Date.now() - cached.time < (ttl || this.cacheMs)) {
-      return cached.data;
-    }
-    const data = await this.proxyJson(this._origin(apiUrl) || this.fallbackBaseUrl, apiUrl);
-    if (data && typeof data === "object") {
-      this._memCache.set(key, { time: Date.now(), data });
-    }
-    return data;
-  }
-
-  toListItem(base, item) {
-    const original = item.title || ("작품 " + item.id);
-    return {
-      name: original,
-      link: this.contentUrl(base, item.id, 1),
-      imageUrl: this._coverImageUrl(base, item.image),
-      __dcTitleMeta: this._titleBridgeMetadataFromItem(original, item)
-    };
-  }
-
-  async catalog(page, criteria, query) {
-    const base = await this._resolveBaseUrl();
-    const rule = this._normalizeCriteria(criteria);
-    const params = ["page=" + encodeURIComponent(page), "limit=24", "sort=" + encodeURIComponent(rule.sort), "v=catalog-media-2"];
-    if (rule.scope) params.push("scope=" + encodeURIComponent(rule.scope));
-    if (query) params.push("q=" + encodeURIComponent(query));
-    if (rule.day) {
-      params.push("day=" + encodeURIComponent(rule.day));
-      if (!rule.status) params.push("status=" + encodeURIComponent("방영중"));
-    }
-    if (rule.format) params.push("format=" + encodeURIComponent(rule.format));
-    if (rule.status && !rule.day) params.push("status=" + encodeURIComponent(rule.status));
-    if (rule.year) params.push("year=" + encodeURIComponent(rule.year));
-    if (rule.genre) params.push("genre=" + encodeURIComponent(rule.genre));
-
-    const apiUrl = base + "/api/anime?" + params.join("&");
-    let data = null;
-    try {
-      data = await this._cachedJson("list", apiUrl, this.cacheMs);
-    } catch (err) {
-      await this._clearTransportFailure();
-      throw err;
-    }
-    if (!Array.isArray(data && data.items)) throw new Error("애니라이프 작품 목록 응답이 올바르지 않습니다.");
-    const items = data.items;
-    const pagination = (data && data.pagination) || {};
-    const list = items.map((item) => this.toListItem(base, item));
-    await this._clearTransportFailure();
-    return {
-      list,
-      hasNextPage: Number(pagination.page || page) < Number(pagination.pages || 1)
-    };
-  }
-
-  async getPopular(page) {
-    const result = await this.catalog(page, this._tabRule(this.popularRulePreference, this._defaultPopularRule()), "");
-    return this._localizeResult(result);
-  }
-
-  async getLatestUpdates(page) {
-    const result = await this.catalog(page, this._tabRule(this.latestRulePreference, this._defaultLatestRule()), "");
-    return this._localizeResult(result);
-  }
-
-  async search(query, page, filters) {
-    const criteria = this._filterCriteria(filters);
-    const result = await this.catalog(page, criteria, this._text(query).trim());
-    return this._localizeResult(result);
-  }
-
-  async getDetail(url) {
-    const card = this._text(url).match(/\/__anilife_(weekday|event)_card__\/(\w+)/);
-    if (card) {
-      return {
-        name: "안내 카드",
-        link: this._text(url),
-        imageUrl: "",
-        author: "애니라이프",
-        artist: "",
-        description: "안내 카드입니다. 목록에서 작품을 선택해 주세요.",
-        genre: ["안내"],
-        status: 0,
-        episodes: [{ name: "1화 . 안내", url: this._text(url), dateUpload: "", scanlator: "", isFiller: false }],
-        chapters: [{ name: "1화 . 안내", url: this._text(url), dateUpload: "", scanlator: "", isFiller: false }]
-      };
-    }
-    const id = this.idFromUrl(url);
-    const base = await this._resolveBaseUrl();
-    let data = null, detailError = null;
-    try {
-      data = await this._cachedJson("detail", base + "/api/anime/" + id + "?v=playback-url-v1", this.cacheMs);
-    } catch (err) {
-      detailError = err;
-      try {
-        data = await this._cachedJson("detail", base + "/api/anime/" + id + "?v=playback-policy-v2", this.cacheMs);
-      } catch (err) { detailError = err; }
-    }
-    const item = data && data.item;
-    if (!item) {
-      await this._clearTransportFailure();
-      throw detailError || new Error("작품 상세 응답이 올바르지 않습니다.");
-    }
-    let episodes = (Array.isArray(item.episodes) ? item.episodes : []).filter(function(episode) {
-      return episode && episode.playable !== false && (episode.playbackUrl || episode.number !== undefined);
-    }).map((episode, index) => {
-      const number = this.formatEpisode(episode.number || (index + 1));
-      const originalName = this._text(episode.title).trim() || (number + "화");
-      const epSourceType = this._text(episode.sourceType || item.sourceType || "").trim();
-      const itemSourceUrl = this._text(episode.sourceUrl || item.sourceUrl || "").trim();
-      let playbackUrl = this.absolute(base, episode.playbackUrl || "/api/playback/" + id + "/" + number);
-      const queryParts = [];
-      if (epSourceType) queryParts.push("st=" + encodeURIComponent(epSourceType));
-      if (itemSourceUrl) queryParts.push("su=" + encodeURIComponent(itemSourceUrl));
-      if (item.title) queryParts.push("title=" + encodeURIComponent(this._text(item.title).trim()));
-      if (queryParts.length) {
-        playbackUrl += (playbackUrl.indexOf("?") >= 0 ? "&" : "?") + queryParts.join("&");
-      }
-      return {
-        name: number + "화 .  " + originalName,
-        url: playbackUrl,
-        dateUpload: episode.date ? this._text(episode.date) : "",
-        scanlator: "",
-        isFiller: false
-      };
-    });
-
-    if (!episodes.length && !Array.isArray(item.episodes)) {
-      const totalCount = Number(item.numberOfEpisodes || item.playableEpisode || item.episodeCount || item.episode || 0);
-      if (totalCount > 0) {
-        episodes = Array.from({ length: totalCount }, (_, i) => {
-          const num = String(i + 1);
-          return {
-            name: num + "화",
-            url: this.absolute(base, "/api/playback/" + id + "/" + num),
-            dateUpload: "",
-            scanlator: "",
-            isFiller: false
-          };
-        });
-      }
-    }
-
-    const people = [item.studio, item.director].map((value) => this._text(value).trim()).filter(Boolean);
-    const detailLanguage = await this._freshDetailTitleLanguage();
-    await this._clearTransportFailure();
-    return {
-      name: await this._localizedTitle(item.title || ("작품 " + id), this._titleBridgeMetadataFromItem(item.title || ("작품 " + id), item), detailLanguage),
-      link: this.contentUrl(base, id, 1),
-      imageUrl: this._coverImageUrl(base, item.image),
-      description: item.description || "",
-      author: people.join(" · "),
-      artist: "",
-      genre: Array.isArray(item.genres) ? item.genres : [],
-      status: item.status === "완결" ? 1 : 0,
-      episodes,
-      chapters: episodes
-    };
-  }
-
-  async _resolveTvwikiSource(sourceUrl, episodeNumber) {
-    try {
-      const match = sourceUrl.match(/tvwiki:\/\/([^\/]+)\/(\d+)/i) || sourceUrl.match(/\/([^\/]+)\/(\d+)(?:\/|$)/);
-      if (!match) return null;
-      const category = match[1];
-      const wrId = match[2];
-      const episodePath = "/" + category + "/" + wrId + "/" + episodeNumber;
-      const base = "https://tvwiki53.net";
-      const endpoint = base + "/bbs/get_episode.php?bo_table=" + encodeURIComponent(category) + "&wr_id=" + encodeURIComponent(wrId) + "&ep_idx=" + encodeURIComponent(episodeNumber);
-      const body = await this._requestText(endpoint, base + episodePath, 15);
-      const data = JSON.parse(body);
-      if (!data || data.success !== true || !data.episode) return null;
-      const epData = data.episode;
-      const sessionData = epData.session_data1 || epData.session_data2;
-      if (!sessionData || !epData.hls_url) return null;
-
-      const sessionPayload = typeof sessionData === "string" ? JSON.parse(sessionData) : sessionData;
-      const bridgeHeaders = { Referer: this.assetBaseUrl + "/", Origin: this.assetBaseUrl, "Content-Type": "application/json; charset=utf-8", Accept: "application/json" };
-      let sessionResult = null;
-      for (const kind of this._clientOrder()) {
-        try {
-          const client = this._client(kind, 12);
-          const resp = await client.post(this.assetBaseUrl + "/api/tvwiki-session", bridgeHeaders, { baseUrl: base, episodePath, sessionData: sessionPayload });
-          if (resp && resp.statusCode >= 200 && resp.statusCode < 300) {
-            const parsed = JSON.parse(this._text(resp.body));
-            if (parsed && parsed.success && parsed.player_url && parsed.t && parsed.sig) {
-              sessionResult = parsed;
-              break;
-            }
-          }
-        } catch (_) {}
-      }
-      if (!sessionResult) return null;
-
-      const separator = this._text(sessionResult.player_url).indexOf("?") >= 0 ? "&" : "?";
-      const playerUrl = this.absolute(base + episodePath, sessionResult.player_url) + separator + "t=" + encodeURIComponent(sessionResult.t) + "&sig=" + encodeURIComponent(sessionResult.sig);
-      const playlistUrl = this.absolute(playerUrl, epData.hls_url);
-      const streamHeaders = { "User-Agent": this.userAgent, Accept: "*/*", Referer: playerUrl, Origin: this._origin(playerUrl) };
-      const playlist = await this._requestText(playlistUrl, playerUrl, 15);
-      const keyMatch = playlist.match(/#EXT-X-KEY:[^\r\n]*URI="([^"]+)"/i);
-      if (!keyMatch) return [{ url: playlistUrl, originalUrl: playlistUrl, quality: "TVWiki 자동 (HLS)", headers: streamHeaders, subtitles: [], audios: [] }];
-
-      const keyUrl = this.absolute(playlistUrl, keyMatch[1]);
-      const envelope = await this._requestText(keyUrl, playerUrl, 15);
-      const common = "u=" + encodeURIComponent(this._base64Url(playlistUrl)) + "&r=" + encodeURIComponent(this._base64Url(playerUrl)) + "&x=" + encodeURIComponent(this._base64Url(envelope));
-      return [
-        { url: this.assetBaseUrl + "/api/tvwiki-playlist.m3u8?m=f&" + common, originalUrl: playlistUrl, quality: "TVWiki 빠른 재생 (CDN 직접)", headers: streamHeaders, subtitles: [], audios: [] },
-        { url: this.assetBaseUrl + "/api/tvwiki-playlist.m3u8?m=p&" + common, originalUrl: playlistUrl, quality: "TVWiki 호환 재생 (중계)", headers: streamHeaders, subtitles: [], audios: [] }
-      ];
-    } catch (_) { return null; }
-  }
-
-  async _resolveLinkkfSource(sourceUrl, episodeNumber) {
-    const match = sourceUrl.match(/\/ani\/(\d+)/i);
-    if (!match) return null;
-    const animeId = match[1];
-    const episodeUrl = "https://linkkf.tv/ani/" + animeId + "/" + episodeNumber;
-    try {
-      const html = await this._requestText(episodeUrl, "https://linkkf.tv/", 12);
-      const playerMatch = html.match(/(?:player_url|src)\s*[:=]\s*["']([^"']+\.m3u8[^"']*)["']/i);
-      if (playerMatch) {
-        const streamUrl = playerMatch[1];
-        return [{ url: streamUrl, originalUrl: streamUrl, quality: "Linkkf 자동 (HLS)", headers: { Referer: episodeUrl, "User-Agent": this.userAgent }, subtitles: [], audios: [] }];
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  async _playbackVideos(base, pageUrl, data) {
-    const candidates = data ? [data.videoUrl, data.backupUrl].filter(function(value, index, all) { return value && all.indexOf(value) === index; }) : [];
-    const subtitles = this._siteSubtitlesDisabled() ? [] : (data && data.subtitleUrl ? [{file: this.absolute(base, data.subtitleUrl), label: "사이트 자막"}] : []);
-    const videos = [];
-    for (let index = 0; index < candidates.length; index++) {
-      const stream = this.absolute(base, candidates[index]);
-      const isHls = /\.(?:m3u8|m3u)(?:[?#]|$)/i.test(stream);
-      const quality = index === 0 ? (isHls ? "자동 (HLS)" : "자동") : "보조 영상";
-      const expanded = isHls ? await this._expandHls(stream, pageUrl, quality) : [{url: stream, quality}];
-      for (const item of expanded) {
-        videos.push({url: item.url, originalUrl: isHls ? this._hlsOriginalUrl(item.url) : item.url, quality: item.quality,
-          headers: {Referer: pageUrl, Origin: base, "User-Agent": data.__userAgent || this.userAgent}, subtitles, audios: []});
+  async _videos(data, page) {
+    const urls = [data.videoUrl, data.backupUrl].filter((value, index, list) => typeof value === "string" && value && list.indexOf(value) === index);
+    const subtitles = this._pref("anilife_disable_site_subtitles", false) === true || !data.subtitleUrl ? [] : [{file: this._absolute(this._base() + "/", data.subtitleUrl), label: "사이트 자막"}];
+    const videos = [], seen = {};
+    for (const value of urls) {
+      const stream = this._absolute(this._base() + "/", value);
+      if (!/^https?:\/\//i.test(stream)) continue;
+      for (const variant of await this._variants(stream, this._mediaHeaders(page, stream))) {
+        if (seen[variant.url]) continue;
+        seen[variant.url] = true;
+        videos.push({url: variant.url, originalUrl: variant.url, quality: variant.quality, headers: this._mediaHeaders(page, variant.url), subtitles, audios: []});
       }
     }
     return videos;
   }
-
   async getVideoList(url) {
-    try {
-      const info = this.episodeFromPlaybackUrl(url);
-      const base = await this._resolveBaseUrl();
-      const pageUrl = this.contentUrl(base, info.animeId, info.episode);
-      const playbackApi = base + "/api/playback/" + info.animeId + "/" + info.episode + "?request=" + Date.now();
-      let playbackError = null;
-      for (const useWebview of [false, true]) {
-        try {
-          const data = useWebview ? await this._webviewApi(base, playbackApi, true) : await this.proxyJson(base, playbackApi);
-          const videos = await this._playbackVideos(base, pageUrl, data);
-          if (videos.length) {
-            await this._clearTransportFailure();
-            return videos;
-          }
-          playbackError = new Error("사이트 재생 응답에 영상 주소가 없습니다.");
-        } catch (err) { playbackError = err; }
-      }
-      const query = this._parseQueryParams(url);
-      let sourceType = (query.st || "").toLowerCase();
-      let sourceUrl = query.su || "";
-
-      // Preserve legacy source fallbacks when the site's own playback fails.
-      if (!sourceUrl || !sourceType) {
-        try {
-          const detail = await this._cachedJson("detail", base + "/api/anime/" + info.animeId + "?v=playback-url-v1", this.cacheMs);
-          if (detail && detail.item) {
-            if (!sourceUrl && detail.item.sourceUrl) sourceUrl = this._text(detail.item.sourceUrl).trim();
-            if (!sourceType) {
-              const ep = Array.isArray(detail.item.episodes) ? detail.item.episodes.find(function(e) { return String(e && e.number) === String(info.episode); }) : null;
-              sourceType = this._text((ep && ep.sourceType) || detail.item.sourceType || "").toLowerCase().trim();
-            }
-          }
-        } catch (_) {}
-      }
-
-      if (sourceType === "tvwiki" || sourceUrl.startsWith("tvwiki://") || /tvwiki/i.test(sourceUrl)) {
-        try {
-          const tvwikiVideos = await this._resolveTvwikiSource(sourceUrl, info.episode);
-          if (tvwikiVideos && tvwikiVideos.length) {
-            await this._clearTransportFailure();
-            return tvwikiVideos;
-          }
-        } catch (_) {}
-      }
-
-      if (sourceType === "linkkf" || /linkkf\.(?:tv|app|com|net)/i.test(sourceUrl)) {
-        try {
-          const linkkfVideos = await this._resolveLinkkfSource(sourceUrl, info.episode);
-          if (linkkfVideos && linkkfVideos.length) {
-            await this._clearTransportFailure();
-            return linkkfVideos;
-          }
-        } catch (_) {}
-      }
-
-      throw playbackError || new Error("애니라이프 영상 주소를 불러오지 못했습니다.");
-    } catch (err) {
-      await this._clearTransportFailure();
-      throw err;
-    }
+    const info = this._episode(url), page = this._base() + "/content/" + info.id + "/" + info.number;
+    const videos = await this._videos(await this._nativePlayback(info), page);
+    if (!videos.length) throw new Error("애니라이프 재생 응답에 영상 주소가 없습니다.");
+    return videos;
   }
 
-  formatEpisode(number) { const value = Number(number); return Number.isInteger(value) ? String(value) : this._text(number); }
+  getSourcePreferences() {
+    return [
+      {key: "anilife_domain_url", editTextPreference: {title: "사이트 주소", summary: "주소가 변경되면 새 주소를 입력하세요. 빈 값은 https://anilife01.tv를 사용합니다.", value: ""}},
+      {key: "anilife_title_language_v2", listPreference: {title: "작품 제목 언어", summary: "사이트에서 제공하는 한국어 또는 일본어 제목을 표시합니다.", valueIndex: 0, entries: ["한국어", "일본어"], entryValues: ["ko", "ja"]}},
+      {key: "anilife_disable_site_subtitles", switchPreferenceCompat: {title: "사이트 자막 끄기", summary: "사이트의 외부 자막을 플레이어에 전달하지 않습니다.", value: false}}
+    ];
+  }
   async getPageList() { return []; }
   async getHtmlContent() { return ""; }
   async cleanHtmlContent(html) { return html; }
