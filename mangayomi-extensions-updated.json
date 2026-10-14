@@ -100,14 +100,14 @@
     "hasCloudflare": false,
     "sourceCodeUrl": "https://raw.githubusercontent.com/wsun1023/mangayomi/main/anilife.js",
     "apiUrl": "",
-    "version": "0.1.17",
+    "version": "0.2.0",
     "isManga": false,
     "itemType": 1,
     "isFullData": false,
     "appMinVerReq": "0.9.2",
     "additionalParams": "",
     "sourceCodeLanguage": 1,
-    "notes": "목록 API 중계·직접 연결·웹뷰 자동 재시도 · 변경된 사이트 재생 세션을 내장 웹뷰로 처리 · 연결 실패 원인 표시 · 기존 작품/회차 주소 호환"
+    "notes": "처음부터 재작성 · 인기/최신/검색/필터 · 작품/회차 정보 · HTTP 쿠키 세션 재생 · 한국어/일본어 제목"
   },
   {
     "name": "re:ainme",
