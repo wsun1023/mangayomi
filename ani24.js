@@ -10,42 +10,12 @@ const mangayomiSources = [{
   itemType: 1,
   isNsfw: false,
   hasCloudflare: false,
-  version: "0.1.20",
+  version: "0.1.22",
   dateFormat: "",
   dateFormatLocale: "",
   pkgPath: "anime/src/ko/ani24.js",
   notes: "ani.ohli24.com 목록·상세·회차 선택자 갱신 · OHLI24 공식 검색(/bbs/search.php?stx=) 단일 직결 적용으로 검색 속도 극대화 · cdndania 영상 서버 탐색 · 페이지 이동 반영 · 목록·상세 제목 한국어/일본어 전환 · 제목 언어 설정 캐시 키 갱신 · Anissia 일본어 원제 우선 + AniList 보조 · 새로고침 즉시 반영 · 기본 설정 · 인기탭: 방영 중 + 오늘 요일 · 최신탭: 방영 중 + 전체 요일 + 업데이트순 · 필터 규칙 저장 · 커스텀 목록 카드 · 재생 서버 병렬 확인 · 영상 다운로드 호환"
 }];
-
-async function dcOfficialEventCard() {
-  const manifestUrl = "https://dc-toki-mangayomi-media.pages.dev/assets/official-event-card.json";
-  try {
-    const response = await new Client({ persistentConnection: false, noProxy: true, timeout: 8, connectTimeout: 5 }).get(
-      manifestUrl + "?event_manifest=" + Date.now(),
-      { Accept: "application/json, text/plain, */*", Referer: "https://dc-toki-mangayomi-media.pages.dev/" }
-    );
-    if (!response || response.statusCode < 200 || response.statusCode >= 300) return null;
-    const data = JSON.parse(String(response.body || ""));
-    if (!data || data.enabled !== true) return null;
-    const parseTime = function(value) {
-      if (!value) return null;
-      const time = Date.parse(String(value));
-      return Number.isFinite(time) ? time : null;
-    };
-    const now = Date.now(), startsAt = parseTime(data.startsAt), endsAt = parseTime(data.endsAt);
-    if (startsAt !== null && now < startsAt) return null;
-    if (endsAt !== null && now >= endsAt) return null;
-    const imageUrl = String(data.imageUrl || data.image || "").trim();
-    if (!/^https:\/\//i.test(imageUrl)) return null;
-    const revision = String(data.revision || "").trim();
-    return {
-      name: String(data.name || data.title || "특별 이벤트").trim(),
-      imageUrl: imageUrl + (revision ? (imageUrl.indexOf("?") >= 0 ? "&" : "?") + "revision=" + encodeURIComponent(revision) : "")
-    };
-  } catch (_) {
-    return null;
-  }
-}
 
 function dcApplySiteOrderEpisodeNumbers(detail) {
   if (!detail || typeof detail !== "object") return detail;
@@ -68,9 +38,7 @@ class DefaultExtension extends MProvider {
     super();
     const originalGetDetail = DefaultExtension.prototype.getDetail.bind(this);
     this.getDetail = async (url) => dcApplySiteOrderEpisodeNumbers(await originalGetDetail(url));
-    this.signalUrl = "https://wankyo83.github.io/tokki-traffic-light/domains.json";
     this.fallbackBaseUrl = "https://ani.ohli24.com";
-    this.assetBaseUrl = "https://dc-toki-mangayomi-media.pages.dev";
     this.userAgent = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36";
     this.popularRulePreference = "ani24_popular_rule_v1";
     this.latestRulePreference = "ani24_latest_rule_v1";
@@ -139,7 +107,6 @@ class DefaultExtension extends MProvider {
   _titleBridgeKey(value) { let text = this._text(value); try { text = text.normalize("NFKC"); } catch (_) {} return text.toLowerCase().replace(/[^a-z0-9가-힣ぁ-んァ-ヶ一-龯]+/g, ""); }
   _anissiaSearchNames(value) { const original = this._text(value).trim(), cleaned = original.replace(/\s*[\(\[]?\d{4}[\)\]]?\s*$/g, "").replace(/\s*[\(\[](더빙|자막|무삭제)[\)\]]\s*$/g, "").replace(/^\s*\((고화질|저화질)\)\s*/g, "").replace(/\s+BD\s*$/i, "").trim(), plain = cleaned.replace(/[~～!！「」『』…:：·・,]+/g, " ").replace(/\s+/g, " ").trim(), season = plain.replace(/시즌\s*(\d+)/g, "$1기"), numbered = season.replace(/\s+(\d+)$/g, " $1기"), korean = (season.match(/^[가-힣0-9][가-힣0-9\s:：\-·・~～!?！？'’.,]*/) || [""])[0].replace(/[\s:：\-·・~～!?！？'’.,]+$/g, "").trim(); return [original, cleaned, plain, season, numbered, korean].filter(function(item, index, list) { return item && list.indexOf(item) === index; }); }
   async _anissiaMetadata(original) { const names = this._anissiaSearchNames(original); for (const query of names) { try { const response = await new Client({ persistentConnection: false, noProxy: true, timeout: 7, connectTimeout: 4 }).get("https://api.anissia.net/anime/list/0?q=" + encodeURIComponent(query), { Accept: "application/json", Referer: "https://anissia.net/anime" }); if (!response || response.statusCode < 200 || response.statusCode >= 300) continue; const payload = JSON.parse(this._text(response.body)), items = payload && payload.data && Array.isArray(payload.data.content) ? payload.data.content : [], wanted = this._titleBridgeKey(query), match = items.find((item) => this._titleBridgeKey(item && item.subject) === wanted); if (match && this._text(match.originalSubject).trim()) return { ko: original, ja: this._text(match.originalSubject).trim(), anissiaId: Number(match.animeNo) || 0, confidence: 500 }; } catch (_) {} } return null; }
-  async _titleBridgeOrigin() { const cached = this._trimSlash(this._preferenceString("dc_title_bridge_anilife_origin", "")), cachedAt = Number(this._preferenceString("dc_title_bridge_anilife_origin_time", "0")); if (/^https:\/\/(?:www\.)?anilife\d+\.tv$/i.test(cached) && cachedAt > 0 && Date.now() - cachedAt < 10 * 60 * 1000) return cached; try { const response = await new Client({ persistentConnection: false, noProxy: true, timeout: 8, connectTimeout: 5 }).get(this.signalUrl, { Accept: "application/json", "Cache-Control": "no-cache" }); const data = JSON.parse(this._text(response.body)), candidate = this._trimSlash(data && data.domains && data.domains.anilife && data.domains.anilife.baseUrl); if (/^https:\/\/(?:www\.)?anilife\d+\.tv$/i.test(candidate)) { this._setPreferenceString("dc_title_bridge_anilife_origin", candidate); this._setPreferenceString("dc_title_bridge_anilife_origin_time", String(Date.now())); return candidate; } } catch (_) {} return /^https:\/\/(?:www\.)?anilife\d+\.tv$/i.test(cached) ? cached : "https://anilife01.tv"; }
   _plainEnglishTitle(value) { const text = this._text(value).trim(); return /[a-z]/i.test(text) && !/[가-힣ぁ-んァ-ヶ一-龯]/.test(text) ? text : ""; }
   _decodeTitleText(value) { return this._text(value).replace(/&#(\d+);/g, function(_, code) { return String.fromCharCode(Number(code)); }).replace(/&#x([0-9a-f]+);/gi, function(_, code) { return String.fromCharCode(parseInt(code, 16)); }).replace(/&amp;/gi, "&").replace(/&quot;/gi, "\"").replace(/&#39;|&apos;/gi, "'").replace(/&nbsp;/gi, " ").trim(); }
   _anilistIdFromText(value) { const match = this._text(value).match(/(?:\/|%2f)anime(?:\/|%2f)(\d{4,})/i); return match ? Number(match[1]) : 0; }
@@ -148,7 +115,7 @@ class DefaultExtension extends MProvider {
   async _aniListMetadata(original, candidate, anilistId) { try { const byId = Number(anilistId) > 0, query = byId ? "query($id:Int!){Media(id:$id,type:ANIME){id synonyms title{romaji english native}}}" : "query($search:String!){Page(page:1,perPage:12){media(search:$search,type:ANIME){id synonyms title{romaji english native}}}}", variables = byId ? { id: Number(anilistId) } : { search: this._text(candidate).trim() }; if (!byId && !variables.search) return null; const response = await new Client({ persistentConnection: false, noProxy: true, timeout: 12, connectTimeout: 6 }).post("https://graphql.anilist.co", { "Content-Type": "application/json", Accept: "application/json" }, JSON.stringify({ query, variables })); if (!response || response.statusCode < 200 || response.statusCode >= 300) return null; const payload = JSON.parse(this._text(response.body)); if (byId) return this._metadataFromAniListMedia(original, payload && payload.data && payload.data.Media); const media = payload && payload.data && payload.data.Page && Array.isArray(payload.data.Page.media) ? payload.data.Page.media : [], wanted = this._titleBridgeKey(variables.search), match = media.find((item) => [item && item.title && item.title.native, item && item.title && item.title.romaji, item && item.title && item.title.english].concat(Array.isArray(item && item.synonyms) ? item.synonyms : []).some((value) => this._titleBridgeKey(value) === wanted)); return this._metadataFromAniListMedia(original, match); } catch (_) { return null; } }
   _linkkfOriginCandidates(body) { const raw = this._text(body), match = raw.match(/원제[\s\S]{0,100}?<\/span>\s*([^<]+)/i); if (!match) return []; return this._decodeTitleText(match[1]).split(/\s*,\s*/).map((value) => value.trim()).filter(Boolean); }
   async _linkkfMetadata(original, url) { if (!/^https:\/\/(?:www\.)?linkkf\.(?:tv|com)\/ani\/\d+\/?/i.test(this._text(url).trim())) return null; try { const response = await new Client({ persistentConnection: false, noProxy: true, timeout: 10, connectTimeout: 6 }).get(this._text(url).trim(), { Accept: "text/html,application/xhtml+xml", Referer: "https://linkkf.tv/" }); if (!response || response.statusCode < 200 || response.statusCode >= 300) return null; const body = this._text(response.body), id = this._anilistIdFromText(body); if (id) { const direct = await this._aniListMetadata(original, "", id); if (direct) return direct; } const candidates = this._linkkfOriginCandidates(body), ordered = candidates.filter((value) => /[ぁ-んァ-ヶ一-龯]/.test(value)).concat(candidates.filter((value) => this._plainEnglishTitle(value))); for (const candidate of ordered) { const data = await this._aniListMetadata(original, candidate, 0); if (data) return data; } } catch (_) {} return null; }
-  async _titleBridgeMetadata(name) { const anissia = await this._anissiaMetadata(name); if (anissia) return anissia; try { const base = await this._titleBridgeOrigin(); for (const query of this._anissiaSearchNames(name)) { const response = await new Client({ persistentConnection: false, noProxy: true, timeout: 10, connectTimeout: 6 }).get(base + "/api/anime?page=1&limit=10&q=" + encodeURIComponent(query), { Accept: "application/json, text/plain, */*", Referer: base + "/" }); if (!response || response.statusCode < 200 || response.statusCode >= 300) continue; const payload = JSON.parse(this._text(response.body)), items = Array.isArray(payload && payload.items) ? payload.items : [], wanted = this._titleBridgeKey(query), match = items.find((item) => this._titleBridgeKey(item && item.title) === wanted || this._titleBridgeKey(item && item.titleOriginal) === wanted); if (!match) continue; const direct = await this._fillBridgeMetadata(this._titleBridgeMetadataFromItem(name, match)); if (direct && direct.ja) return direct; const linked = await this._linkkfMetadata(name, match.sourceUrl); if (linked) return linked; if (direct) return direct; } return null; } catch (_) { return null; } }
+  async _titleBridgeMetadata(name) { const anissia = await this._anissiaMetadata(name); if (anissia) return anissia; try { const base = "https://anilife01.tv"; for (const query of this._anissiaSearchNames(name)) { const response = await new Client({ persistentConnection: false, noProxy: true, timeout: 10, connectTimeout: 6 }).get(base + "/api/anime?page=1&limit=10&q=" + encodeURIComponent(query), { Accept: "application/json, text/plain, */*", Referer: base + "/" }); if (!response || response.statusCode < 200 || response.statusCode >= 300) continue; const payload = JSON.parse(this._text(response.body)), items = Array.isArray(payload && payload.items) ? payload.items : [], wanted = this._titleBridgeKey(query), match = items.find((item) => this._titleBridgeKey(item && item.title) === wanted || this._titleBridgeKey(item && item.titleOriginal) === wanted); if (!match) continue; const direct = await this._fillBridgeMetadata(this._titleBridgeMetadataFromItem(name, match)); if (direct && direct.ja) return direct; const linked = await this._linkkfMetadata(name, match.sourceUrl); if (linked) return linked; if (direct) return direct; } return null; } catch (_) { return null; } }
   async _fillBridgeMetadata(data) { if (!data) return data; if (data.ja) return data; const filled = await this._aniListMetadata(data.ko || "", data.ja || data.romaji || data.en, data.anilistId); return filled || data; }
   async _titleMetadata(name) {
     const original = this._text(name).trim(); if (!original) return null; const key = this.titleCachePrefix + this._titleCacheToken(original), timeKey = key + "_time"; const cached = this._preferenceString(key, ""), cachedAt = Number(this._preferenceString(timeKey, "0"));
@@ -158,19 +125,12 @@ class DefaultExtension extends MProvider {
   async _localizedTitle(name, languageOverride) { const original = this._text(name).trim(), language = languageOverride || this._titleLanguage(); if (!original || language === "ko") return original; const data = await this._titleMetadata(original), localized = data ? this._text(data[language]).trim() : ""; return localized || original; }
   async _localizeResult(result) { if (!result || !Array.isArray(result.list) || !result.list.length || this._titleLanguage() === "ko") return result; const items = result.list.slice(0, 8), workers = []; let cursor = 0; const work = async () => { while (true) { const index = cursor++; if (index >= items.length) return; const item = items[index]; if (!item || /\/__ani24_weekday_card__\//.test(this._text(item.link))) continue; try { item.name = await this._localizedTitle(item.name); } catch (_) {} } }; for (let index = 0; index < Math.min(4, items.length); index++) workers.push(work()); await Promise.all(workers); return result; }
   _isAllowedBaseUrl(v) { return /^https:\/\/(?:ani\.ohli24\.com|(?:www\.)?ohli24\.net)\/?$/i.test(this._text(v).trim()); }
-  // Migrate legacy manual and signal URLs to the current Ani24 domain.
+  // Migrate legacy manual URLs to the current Ani24 domain.
   _normalizeBaseUrl(v) { return this._trimSlash(v).toLowerCase().replace(/^https:\/\/(?:www\.)?ohli24\.net$/, this.fallbackBaseUrl); }
   async _resolveBaseUrl() {
     if (this._cachedBaseUrl) return this._cachedBaseUrl;
     const manual = this._text(this._preference("ani24_domain_url", "")).trim();
     if (this._isAllowedBaseUrl(manual)) return (this._cachedBaseUrl = this._normalizeBaseUrl(manual));
-    const cached = this._text(this._preference("ani24_cached_resolved_url", "")).trim();
-    const cachedTime = Number(this._preference("ani24_cached_resolved_time", "0"));
-    if (this._isAllowedBaseUrl(cached) && cachedTime > 0 && Date.now() - cachedTime < 24 * 60 * 60 * 1000) {
-      return (this._cachedBaseUrl = this._normalizeBaseUrl(cached));
-    }
-    this._setPreferenceString("ani24_cached_resolved_url", this.fallbackBaseUrl);
-    this._setPreferenceString("ani24_cached_resolved_time", String(Date.now()));
     return (this._cachedBaseUrl = this.fallbackBaseUrl);
   }
   _headers(url, referer) { const origin = this._origin(url) || this.fallbackBaseUrl; return { "User-Agent": this.userAgent, "Accept": "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8", "Referer": referer || origin + "/" }; }
@@ -224,11 +184,9 @@ class DefaultExtension extends MProvider {
   }
   async _tabCard(slug) {
     const day = slug || this._koreaWeekday();
-    const customSource = this._text(this._preference("ani24_custom_card_json_url", "")).trim();
     const customImage = await this._customCardUrl(day);
-    const event = customSource ? null : await dcOfficialEventCard();
-    if (!customImage && !event) return null;
-    return { name: customImage ? this._weekdayName(day) : event.name, link: "/__ani24_weekday_card__/" + day, imageUrl: customImage || event.imageUrl };
+    if (!customImage) return null;
+    return { name: this._weekdayName(day), link: "/__ani24_weekday_card__/" + day, imageUrl: customImage };
   }
 
   _defaultPopularRule() { return { mode: "ongoing", day: String(this._koreaDayNumber()), genre: "", sort: "updatetime", year: "", yearKind: "finished", top: "" }; }
@@ -770,5 +728,5 @@ class DefaultExtension extends MProvider {
     const pop = this._tabRule(this.popularRulePreference, this._defaultPopularRule()), latest = this._tabRule(this.latestRulePreference, this._defaultLatestRule());
     return [sep("s1"), head("h1", "방영중"), this._select("ongoingDay", "요일", options(this.days)), this._select("ongoingSort", "정렬", options(this.sorts)), sep("s2"), head("h2", "완결"), this._select("finishedGenre", "장르", options(this.genres)), this._select("finishedSort", "정렬", options(this.sorts)), sep("s3"), head("h3", "극장판"), this._select("movieGenre", "장르", options(this.genres)), this._select("movieSort", "정렬", options(this.sorts)), sep("s4"), head("h4", "연도별"), this._select("yearValue", "연도별", options(this.years)), this._select("yearKind", "구분", options(this.yearKinds)), sep("s5"), head("h5", "TOP5 (현재 인기 위젯에서 구분별 최대 5개)"), this._select("topKind", "TOP5", options(this.topKinds)), sep("s6"), head("saveHelp", "조건을 고른 뒤 Filter 버튼을 누르면 결과를 보고 Popular/Latest 탭 규칙으로 저장할 수 있습니다."), head("cardHelp", "목록 카드는 Popular/Latest 1번에만 표시되며 필터 결과와 글자 검색에서는 숨깁니다."), head("popularSummary", "현재 Popular: " + this._ruleSummary(pop)), head("latestSummary", "현재 Latest: " + this._ruleSummary(latest)), this._select("tabRuleAction", "Popular/Latest 규칙", [o("저장하지 않음 (필터 결과만 보기)", "0"), o("현재 조건을 Popular 탭에 저장", "1"), o("현재 조건을 Latest 탭에 저장", "2"), o("Popular 탭을 기본값으로 복원", "3"), o("Latest 탭을 기본값으로 복원", "4"), o("두 탭 모두 기본값으로 복원", "5")])];
   }
-  getSourcePreferences() { return [{ key: "ani24_title_language_v2", listPreference: { title: "작품 제목 언어", summary: "한국어와 일본어 중에서 선택합니다. 변경 후 현재 화면을 새로고침하세요. Anissia에서 매칭되지 않는 작품은 한국어를 유지합니다.", valueIndex: 0, entries: ["한국어", "일본어"], entryValues: ["ko", "ja"] } }, { key: "ani24_domain_url", editTextPreference: { title: "애니24 주소 직접 지정 (선택)", summary: "빈 값이면 ani.ohli24.com을 사용합니다. 기존 ohli24.net 주소는 자동으로 변환합니다.", value: "", dialogTitle: "https://ani.ohli24.com", dialogMessage: "자동 주소를 사용하려면 빈 값으로 두세요." } }, { key: "ani24_custom_card_json_url", editTextPreference: { title: "커스텀 목록 카드 (선택)", summary: "공개 JSON 주소 1개로 요일별 카드 7장을 설정합니다. 360×540 GIF를 권장하며 용량·프레임 제한은 없습니다.", value: "", dialogTitle: "커스텀 목록 카드 JSON 주소", dialogMessage: "Google Drive 공개 공유 링크 또는 직접 JSON 주소를 넣으세요. 개인 카드를 설정하면 공용 이벤트 카드는 표시되지 않습니다. 빈 값이면 활성 공용 이벤트 카드만 표시하며, 이벤트가 없으면 작품 목록만 표시합니다." } }]; }
+  getSourcePreferences() { return [{ key: "ani24_title_language_v2", listPreference: { title: "작품 제목 언어", summary: "한국어와 일본어 중에서 선택합니다. 변경 후 현재 화면을 새로고침하세요. Anissia에서 매칭되지 않는 작품은 한국어를 유지합니다.", valueIndex: 0, entries: ["한국어", "일본어"], entryValues: ["ko", "ja"] } }, { key: "ani24_domain_url", editTextPreference: { title: "애니24 주소 직접 지정 (선택)", summary: "빈 값이면 ani.ohli24.com을 사용합니다. 기존 ohli24.net 주소는 자동으로 변환합니다.", value: "", dialogTitle: "https://ani.ohli24.com", dialogMessage: "자동 주소를 사용하려면 빈 값으로 두세요." } }, { key: "ani24_custom_card_json_url", editTextPreference: { title: "커스텀 목록 카드 (선택)", summary: "공개 JSON 주소 1개로 요일별 카드 7장을 설정합니다. 360×540 GIF를 권장하며 용량·프레임 제한은 없습니다.", value: "", dialogTitle: "커스텀 목록 카드 JSON 주소", dialogMessage: "Google Drive 공개 공유 링크 또는 직접 JSON 주소를 넣으세요. 빈 값이면 카드 없이 작품 목록만 표시합니다." } }]; }
 }
