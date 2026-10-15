@@ -10,123 +10,12 @@ const mangayomiSources = [{
   itemType: 1,
   isNsfw: false,
   hasCloudflare: false,
-  version: "0.1.19",
+  version: "0.1.20",
   dateFormat: "",
   dateFormatLocale: "",
   pkgPath: "anime/src/ko/ani24.js",
   notes: "ani.ohli24.com 목록·상세·회차 선택자 갱신 · OHLI24 공식 검색(/bbs/search.php?stx=) 단일 직결 적용으로 검색 속도 극대화 · cdndania 영상 서버 탐색 · 페이지 이동 반영 · 목록·상세 제목 한국어/일본어 전환 · 제목 언어 설정 캐시 키 갱신 · Anissia 일본어 원제 우선 + AniList 보조 · 새로고침 즉시 반영 · 기본 설정 · 인기탭: 방영 중 + 오늘 요일 · 최신탭: 방영 중 + 전체 요일 + 업데이트순 · 필터 규칙 저장 · 커스텀 목록 카드 · 재생 서버 병렬 확인 · 영상 다운로드 호환"
 }];
-
-function dcResolveListCardManifest(data, scope, tab) {
-  const source = data && typeof data === "object" ? data : {};
-  const currentScope = String(scope || "default").trim().toLowerCase();
-  const currentTab = String(tab || "all").trim().toLowerCase();
-  const groupByScope = {
-    xtoon: "manga", toon11: "manga", goodtoon: "manga", blacktoon: "manga", wolf_manga: "manga", wolf_webtoon: "manga",
-    ani24: "media", anilife: "media", dc_iptv: "media", dc_live: "media", samsung_tv_plus: "media", linkkf_anime: "media", tvroom: "media",
-    toki31_novel: "novel"
-  };
-  const currentGroup = groupByScope[currentScope] || "";
-  const values = function(value) {
-    if (Array.isArray(value)) return value.map(function(item) { return String(item || "").trim().toLowerCase(); }).filter(Boolean);
-    const one = String(value || "").trim().toLowerCase();
-    return one ? [one] : [];
-  };
-  let selected = null, selectedIndex = -1, selectedScore = -Infinity;
-  const rules = Array.isArray(source.rules) ? source.rules : [];
-  for (let index = 0; index < rules.length; index++) {
-    const rule = rules[index];
-    if (!rule || typeof rule !== "object" || rule.enabled === false) continue;
-    const match = rule.match && typeof rule.match === "object" ? rule.match : {};
-    const targets = values(rule.targets || rule.extensions || rule.scopes || match.targets || match.extensions || match.scopes);
-    const groups = values(rule.groups || match.groups);
-    const tabs = values(rule.tabs || rule.tab || match.tabs || match.tab);
-    let targetScore = 0;
-    if (targets.length) {
-      if (targets.indexOf(currentScope + ":" + currentTab) >= 0) targetScore = 600;
-      else if (targets.indexOf(currentScope) >= 0) targetScore = 500;
-      else continue;
-    } else if (groups.length) {
-      if (!currentGroup || groups.indexOf(currentGroup) < 0) continue;
-      targetScore = 300;
-    }
-    let tabScore = 0;
-    if (tabs.length && tabs.indexOf("*") < 0 && tabs.indexOf("all") < 0 && tabs.indexOf("both") < 0) {
-      if (tabs.indexOf(currentTab) < 0) continue;
-      tabScore = 50;
-    }
-    const priority = Number(rule.priority) || 0;
-    const score = priority * 10000 + targetScore + tabScore;
-    if (score > selectedScore) { selected = rule; selectedIndex = index; selectedScore = score; }
-  }
-  const selectedCards = selected && Array.isArray(selected.cards) && selected.cards.length ? selected.cards : source.cards;
-  const rootRotation = source.rotation && typeof source.rotation === "object" ? source.rotation : {};
-  const ruleRotation = selected && selected.rotation && typeof selected.rotation === "object" ? selected.rotation : {};
-  const revisionParts = [source.revision];
-  if (selected) revisionParts.push(selected.revision, selected.id || ("rule-" + selectedIndex));
-  return {
-    cards: Array.isArray(selectedCards) ? selectedCards : [],
-    name: String(selected && (selected.name || selected.title) || source.name || source.title || "").trim(),
-    revision: revisionParts.map(function(value) { return String(value || "").trim(); }).filter(Boolean).join(":"),
-    rotation: Object.assign({}, rootRotation, ruleRotation)
-  };
-}
-
-async function dcOfficialListCardSystem(scope, tab, defaultName) {
-  if (defaultName === undefined) { defaultName = tab; tab = "all"; }
-  const assetBaseUrl = "https://dc-toki-mangayomi-novel.pages.dev";
-  const manifestUrl = assetBaseUrl + "/assets/official-random-cards.json";
-  let data = null;
-  try {
-    const response = await new Client({ persistentConnection: false, noProxy: true, timeout: 8, connectTimeout: 5 }).get(
-      manifestUrl + "?card_manifest=" + Date.now(),
-      { Accept: "application/json, text/plain, */*", Referer: assetBaseUrl + "/", "Cache-Control": "no-cache" }
-    );
-    if (response && response.statusCode >= 200 && response.statusCode < 300) data = JSON.parse(String(response.body || ""));
-  } catch (_) {}
-  const config = dcResolveListCardManifest(data, scope, tab);
-  const revision = config.revision;
-  let cards = config.cards.map(function(value) {
-    const rawUrl = typeof value === "string" ? value : value && (value.imageUrl || value.image || value.url);
-    let imageUrl = String(rawUrl || "").trim();
-    if (imageUrl.startsWith("/")) imageUrl = assetBaseUrl + imageUrl;
-    if (imageUrl.toLowerCase().indexOf("https://") !== 0) return null;
-    if (revision) imageUrl += (imageUrl.indexOf("?") >= 0 ? "&" : "?") + "revision=" + encodeURIComponent(revision);
-    return { name: String(typeof value === "object" && value && (value.name || value.title) || config.name || defaultName || "오늘의 한 장").trim(), imageUrl: imageUrl };
-  }).filter(Boolean);
-  if (!cards.length) {
-    cards = Array.from({ length: 20 }, function(_, offset) {
-      return { name: defaultName || "오늘의 한 장", imageUrl: assetBaseUrl + "/card/shared-random/card-" + String(offset + 1).padStart(2, "0") + ".jpg" };
-    });
-  }
-  const rotation = config.rotation;
-  const holdMinutes = String(rotation.mode || "").toLowerCase() === "interval" ? Math.max(1, Number(rotation.intervalMinutes) || 60) : 0;
-  const preferences = new SharedPreferences();
-  const safeScope = String(scope || "default").replace(/[^a-z0-9_-]/gi, "_");
-  const safeTab = String(tab || "all").replace(/[^a-z0-9_-]/gi, "_");
-  const key = "dc_list_card_system_last_" + safeScope + "_" + safeTab;
-  const timeKey = key + "_time";
-  const revisionKey = key + "_revision";
-  let previous = 0, previousAt = 0, previousRevision = "";
-  try {
-    previous = Number(preferences.getString(key, "0"));
-    previousAt = Number(preferences.getString(timeKey, "0"));
-    previousRevision = String(preferences.getString(revisionKey, "") || "");
-  } catch (_) {}
-  let index = previous;
-  const keepPrevious = holdMinutes > 0 && previous >= 1 && previous <= cards.length && previousAt > 0 && Date.now() - previousAt < holdMinutes * 60 * 1000 && previousRevision === revision;
-  if (!keepPrevious) {
-    index = Math.floor(Math.random() * cards.length) + 1;
-    const avoidImmediateRepeat = rotation.avoidImmediateRepeat !== false;
-    if (avoidImmediateRepeat && cards.length > 1 && index === previous) index = index % cards.length + 1;
-    try {
-      preferences.setString(key, String(index));
-      preferences.setString(timeKey, String(Date.now()));
-      preferences.setString(revisionKey, revision);
-    } catch (_) {}
-  }
-  return cards[Math.max(1, Math.min(cards.length, index || 1)) - 1];
-}
 
 async function dcOfficialEventCard() {
   const manifestUrl = "https://dc-toki-mangayomi-media.pages.dev/assets/official-event-card.json";
@@ -333,13 +222,13 @@ class DefaultExtension extends MProvider {
     if (data.revision !== undefined && this._text(data.revision).trim()) image += (image.indexOf("?") >= 0 ? "&" : "?") + "revision=" + encodeURIComponent(this._text(data.revision));
     return image;
   }
-  async _tabCard(slug, tab) {
+  async _tabCard(slug) {
     const day = slug || this._koreaWeekday();
     const customSource = this._text(this._preference("ani24_custom_card_json_url", "")).trim();
     const customImage = await this._customCardUrl(day);
     const event = customSource ? null : await dcOfficialEventCard();
-    const official = customImage || event ? null : await dcOfficialListCardSystem("ani24", tab, "오늘의 애니");
-    return { name: customImage ? this._weekdayName(day) : event ? event.name : official.name, link: "/__ani24_weekday_card__/" + day, imageUrl: customImage || (event && event.imageUrl) || official.imageUrl };
+    if (!customImage && !event) return null;
+    return { name: customImage ? this._weekdayName(day) : event.name, link: "/__ani24_weekday_card__/" + day, imageUrl: customImage || event.imageUrl };
   }
 
   _defaultPopularRule() { return { mode: "ongoing", day: String(this._koreaDayNumber()), genre: "", sort: "updatetime", year: "", yearKind: "finished", top: "" }; }
@@ -496,9 +385,14 @@ class DefaultExtension extends MProvider {
     const url = this._catalogueUrl(base, page, n);
     return this._parseCards(new Document(await this._requestText(url, base + "/", "목록")), base, true, page);
   }
-  async _prependCard(result, page, tab) { if (Number(page) !== 1) return result; return { list: [await this._tabCard(undefined, tab)].concat(result.list || []), hasNextPage: result.hasNextPage === true }; }
-  async getPopular(page) { return this._localizeResult(await this._prependCard(await this._list(page, this._tabRule(this.popularRulePreference, this._defaultPopularRule())), page, "popular")); }
-  async getLatestUpdates(page) { return this._localizeResult(await this._prependCard(await this._list(page, this._tabRule(this.latestRulePreference, this._defaultLatestRule())), page, "latest")); }
+  async _prependCard(result, page) {
+    if (Number(page) !== 1) return result;
+    const card = await this._tabCard();
+    if (!card) return result;
+    return { list: [card].concat(result.list || []), hasNextPage: result.hasNextPage === true };
+  }
+  async getPopular(page) { return this._localizeResult(await this._prependCard(await this._list(page, this._tabRule(this.popularRulePreference, this._defaultPopularRule())), page)); }
+  async getLatestUpdates(page) { return this._localizeResult(await this._prependCard(await this._list(page, this._tabRule(this.latestRulePreference, this._defaultLatestRule())), page)); }
 
   _normalizeSearch(v) { let s = this._text(v); try { s = s.normalize("NFKC"); } catch (_) {} return s.trim().replace(/\s+/g, " "); }
   _searchKey(v) { return this._normalizeSearch(v).toLowerCase().replace(/\s+/g, "").replace(/[.,/#!$%^&*;:{}=\-_`~()'"\[\]<>?·…]/g, ""); }
@@ -651,7 +545,7 @@ class DefaultExtension extends MProvider {
     const card = this._text(url).match(/\/__ani24_weekday_card__\/(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/);
     if (card) {
       const item = await this._tabCard(card[1]);
-      return { name: item.name, link: item.link, imageUrl: item.imageUrl, author: "애니24", description: "오늘의 시간 흐름을 담은 움직이는 요일 카드입니다. 뒤로 돌아가 작품을 선택해 주세요.", genre: ["요일 안내"], status: 0, episodes: [], chapters: [] };
+      return { name: item ? item.name : this._weekdayName(card[1]), link: item ? item.link : this._relativePath(url), imageUrl: item ? item.imageUrl : "", author: "애니24", description: "오늘의 시간 흐름을 담은 움직이는 요일 카드입니다. 뒤로 돌아가 작품을 선택해 주세요.", genre: ["요일 안내"], status: 0, episodes: [], chapters: [] };
     }
     const base = await this._resolveBaseUrl(), path = this._cleanPath(url);
     if (!this._isSeriesPath(path)) throw new Error("잘못된 애니24 작품 주소입니다.");
@@ -876,5 +770,5 @@ class DefaultExtension extends MProvider {
     const pop = this._tabRule(this.popularRulePreference, this._defaultPopularRule()), latest = this._tabRule(this.latestRulePreference, this._defaultLatestRule());
     return [sep("s1"), head("h1", "방영중"), this._select("ongoingDay", "요일", options(this.days)), this._select("ongoingSort", "정렬", options(this.sorts)), sep("s2"), head("h2", "완결"), this._select("finishedGenre", "장르", options(this.genres)), this._select("finishedSort", "정렬", options(this.sorts)), sep("s3"), head("h3", "극장판"), this._select("movieGenre", "장르", options(this.genres)), this._select("movieSort", "정렬", options(this.sorts)), sep("s4"), head("h4", "연도별"), this._select("yearValue", "연도별", options(this.years)), this._select("yearKind", "구분", options(this.yearKinds)), sep("s5"), head("h5", "TOP5 (현재 인기 위젯에서 구분별 최대 5개)"), this._select("topKind", "TOP5", options(this.topKinds)), sep("s6"), head("saveHelp", "조건을 고른 뒤 Filter 버튼을 누르면 결과를 보고 Popular/Latest 탭 규칙으로 저장할 수 있습니다."), head("cardHelp", "목록 카드는 Popular/Latest 1번에만 표시되며 필터 결과와 글자 검색에서는 숨깁니다."), head("popularSummary", "현재 Popular: " + this._ruleSummary(pop)), head("latestSummary", "현재 Latest: " + this._ruleSummary(latest)), this._select("tabRuleAction", "Popular/Latest 규칙", [o("저장하지 않음 (필터 결과만 보기)", "0"), o("현재 조건을 Popular 탭에 저장", "1"), o("현재 조건을 Latest 탭에 저장", "2"), o("Popular 탭을 기본값으로 복원", "3"), o("Latest 탭을 기본값으로 복원", "4"), o("두 탭 모두 기본값으로 복원", "5")])];
   }
-  getSourcePreferences() { return [{ key: "ani24_title_language_v2", listPreference: { title: "작품 제목 언어", summary: "한국어와 일본어 중에서 선택합니다. 변경 후 현재 화면을 새로고침하세요. Anissia에서 매칭되지 않는 작품은 한국어를 유지합니다.", valueIndex: 0, entries: ["한국어", "일본어"], entryValues: ["ko", "ja"] } }, { key: "ani24_domain_url", editTextPreference: { title: "애니24 주소 직접 지정 (선택)", summary: "빈 값이면 ani.ohli24.com을 사용합니다. 기존 ohli24.net 주소는 자동으로 변환합니다.", value: "", dialogTitle: "https://ani.ohli24.com", dialogMessage: "자동 주소를 사용하려면 빈 값으로 두세요." } }, { key: "ani24_custom_card_json_url", editTextPreference: { title: "커스텀 목록 카드 (선택)", summary: "공개 JSON 주소 1개로 요일별 카드 7장을 설정합니다. 360×540 GIF를 권장하며 용량·프레임 제한은 없습니다.", value: "", dialogTitle: "커스텀 목록 카드 JSON 주소", dialogMessage: "Google Drive 공개 공유 링크 또는 직접 JSON 주소를 넣으세요. 개인 카드를 설정하면 공용 이벤트 카드는 표시되지 않습니다. 빈 값이면 공용 이벤트 또는 기본 미디어 요일 카드를 사용합니다." } }]; }
+  getSourcePreferences() { return [{ key: "ani24_title_language_v2", listPreference: { title: "작품 제목 언어", summary: "한국어와 일본어 중에서 선택합니다. 변경 후 현재 화면을 새로고침하세요. Anissia에서 매칭되지 않는 작품은 한국어를 유지합니다.", valueIndex: 0, entries: ["한국어", "일본어"], entryValues: ["ko", "ja"] } }, { key: "ani24_domain_url", editTextPreference: { title: "애니24 주소 직접 지정 (선택)", summary: "빈 값이면 ani.ohli24.com을 사용합니다. 기존 ohli24.net 주소는 자동으로 변환합니다.", value: "", dialogTitle: "https://ani.ohli24.com", dialogMessage: "자동 주소를 사용하려면 빈 값으로 두세요." } }, { key: "ani24_custom_card_json_url", editTextPreference: { title: "커스텀 목록 카드 (선택)", summary: "공개 JSON 주소 1개로 요일별 카드 7장을 설정합니다. 360×540 GIF를 권장하며 용량·프레임 제한은 없습니다.", value: "", dialogTitle: "커스텀 목록 카드 JSON 주소", dialogMessage: "Google Drive 공개 공유 링크 또는 직접 JSON 주소를 넣으세요. 개인 카드를 설정하면 공용 이벤트 카드는 표시되지 않습니다. 빈 값이면 활성 공용 이벤트 카드만 표시하며, 이벤트가 없으면 작품 목록만 표시합니다." } }]; }
 }
