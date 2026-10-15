@@ -5,7 +5,7 @@ const mangayomiSources = [{
   lang: "ko",
   baseUrl: "https://ani.ohli24.com",
   apiUrl: "",
-  iconUrl: "https://dc-toki-mangayomi-media.pages.dev/icon/ko.media.png",
+  iconUrl: "",
   typeSource: "single",
   itemType: 1,
   isNsfw: false,
